@@ -1,0 +1,12 @@
+{
+  "domain": "mock_solar",
+  "name": "Mock Solar",
+  "codeowners": [
+    "@ludeeus"
+  ],
+  "config_flow": true,
+  "documentation": "https://github.com/phileaton/ha-mocksolar",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/phileaton/ha-mocksolar/issues",
+  "version": "0.1.0"
+}

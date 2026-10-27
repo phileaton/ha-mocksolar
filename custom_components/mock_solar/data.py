@@ -1,4 +1,4 @@
-"""Custom types for integration_blueprint."""
+"""Custom types for mock_solar."""
 
 from __future__ import annotations
 
