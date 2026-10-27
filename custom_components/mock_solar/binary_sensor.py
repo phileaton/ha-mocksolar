@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 ENTITY_DESCRIPTIONS = (
     BinarySensorEntityDescription(
         key="mock_solar",
-        name="Integration Blueprint Binary Sensor",
+        name="Mock Solar Binary Sensor",
         device_class=BinarySensorDeviceClass.CONNECTIVITY,
     ),
 )
