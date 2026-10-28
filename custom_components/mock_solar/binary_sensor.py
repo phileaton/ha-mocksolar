@@ -1,61 +1,39 @@
-"""Binary sensor platform for mock_solar."""
-
-from __future__ import annotations
+"""Read-only vehicle connection telemetry."""
 
 from typing import TYPE_CHECKING
 
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
-    BinarySensorEntityDescription,
 )
 
-from .entity import IntegrationBlueprintEntity
+from .entity import MockSolarEntity
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
     from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-    from .coordinator import BlueprintDataUpdateCoordinator
-    from .data import IntegrationBlueprintConfigEntry
-
-ENTITY_DESCRIPTIONS = (
-    BinarySensorEntityDescription(
-        key="mock_solar",
-        name="Mock Solar Binary Sensor",
-        device_class=BinarySensorDeviceClass.CONNECTIVITY,
-    ),
-)
+    from .data import MockSolarConfigEntry
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,  # noqa: ARG001 Unused function argument: `hass`
-    entry: IntegrationBlueprintConfigEntry,
+    hass: HomeAssistant,  # noqa: ARG001 HA platform interface
+    entry: MockSolarConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up the binary_sensor platform."""
+    """Expose vehicle connection independently from the charging control."""
     async_add_entities(
-        IntegrationBlueprintBinarySensor(
-            coordinator=entry.runtime_data.coordinator,
-            entity_description=entity_description,
-        )
-        for entity_description in ENTITY_DESCRIPTIONS
+        [MockSolarConnected(entry.runtime_data, "ev_connected", "EV connection")]
     )
 
 
-class IntegrationBlueprintBinarySensor(IntegrationBlueprintEntity, BinarySensorEntity):
-    """mock_solar binary_sensor class."""
+class MockSolarConnected(MockSolarEntity, BinarySensorEntity):
+    """Vehicle cable connection, not cloud or hardware availability."""
 
-    def __init__(
-        self,
-        coordinator: BlueprintDataUpdateCoordinator,
-        entity_description: BinarySensorEntityDescription,
-    ) -> None:
-        """Initialize the binary_sensor class."""
-        super().__init__(coordinator)
-        self.entity_description = entity_description
+    entity_id = "binary_sensor.mock_ev_connected"
+    _attr_device_class = BinarySensorDeviceClass.CONNECTIVITY
 
     @property
     def is_on(self) -> bool:
-        """Return true if the binary_sensor is on."""
-        return self.coordinator.data.get("title", "") == "foo"
+        """Return whether the simulated vehicle is connected."""
+        return self.coordinator.data.charger_connected

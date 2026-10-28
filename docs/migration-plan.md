@@ -4,7 +4,21 @@ Assessment date: 2026-10-27. Local files were inspected directly. Desired behavi
 comes from the supplied handoff and the subsequently supplied original YAML. Upstream findings describe EV Smart Charger's
 `master` source inspected on this date, not a tested pairing with a release.
 
-## Inventory and gaps
+## Implementation progress
+
+The manual model and native wiring milestones are now implemented: a validated,
+immutable local model, credential-free single-instance setup, 24 native entities,
+immediate command updates, blueprint entry migration, and lifecycle tests.
+The optional native dashboard is `examples/mock_energy_dashboard.yaml`. SOC is
+manual and inputs reset on reload/restart. W/sign compatibility outputs and
+end-to-end EV Smart Charger checks remain the next milestone, followed by
+elapsed-time simulation. See the README for current installation and controls.
+
+The inventory below records the original blueprint assessment. Sample API,
+polling, credentials and example entities have since been replaced; simulation,
+number, strings and test files now exist.
+
+## Original inventory and gaps
 
 | Files | Current behavior |
 | --- | --- |
@@ -152,5 +166,6 @@ or the prototype battery sign.
 6. **Prepare distribution.** Validate ownership, HACS metadata, release version,
    optional dashboard and installation on a clean Home Assistant instance.
 
-The next implementation milestone is the manual model and its tests, then native
-entity wiring. This assessment changes documentation only; runtime is unchanged.
+Milestones 1–3 are complete for the manual simulator, including recovery of both
+legacy files. Continue with compatibility outputs and end-to-end verification
+(step 4), then the dynamic model. The legacy artifacts remain unchanged.

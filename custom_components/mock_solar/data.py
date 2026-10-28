@@ -1,25 +1,7 @@
-"""Custom types for mock_solar."""
+"""Config entry type for the local simulator."""
 
-from __future__ import annotations
+from homeassistant.config_entries import ConfigEntry
 
-from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from .coordinator import MockSolarCoordinator
 
-if TYPE_CHECKING:
-    from homeassistant.config_entries import ConfigEntry
-    from homeassistant.loader import Integration
-
-    from .api import IntegrationBlueprintApiClient
-    from .coordinator import BlueprintDataUpdateCoordinator
-
-
-type IntegrationBlueprintConfigEntry = ConfigEntry[IntegrationBlueprintData]
-
-
-@dataclass
-class IntegrationBlueprintData:
-    """Data for the Blueprint integration."""
-
-    client: IntegrationBlueprintApiClient
-    coordinator: BlueprintDataUpdateCoordinator
-    integration: Integration
+type MockSolarConfigEntry = ConfigEntry[MockSolarCoordinator]

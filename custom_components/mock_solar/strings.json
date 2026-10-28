@@ -1,0 +1,14 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Create Mock Solar simulator",
+        "description": "Create a local manual energy simulator. No hardware or credentials are needed. Values reset to defaults when the integration reloads or Home Assistant restarts."
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "Only one Mock Solar simulator is supported.",
+      "already_configured": "Mock Solar is already configured."
+    }
+  }
+}

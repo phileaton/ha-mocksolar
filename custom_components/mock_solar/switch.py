@@ -1,67 +1,59 @@
-"""Switch platform for mock_solar."""
-
-from __future__ import annotations
+"""Native charger lifecycle and grid override controls."""
 
 from typing import TYPE_CHECKING, Any
 
-from homeassistant.components.switch import SwitchEntity, SwitchEntityDescription
+from homeassistant.components.switch import SwitchEntity
 
-from .entity import IntegrationBlueprintEntity
+from .entity import MockSolarEntity
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
     from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-    from .coordinator import BlueprintDataUpdateCoordinator
-    from .data import IntegrationBlueprintConfigEntry
+    from .coordinator import MockSolarCoordinator
+    from .data import MockSolarConfigEntry
 
-ENTITY_DESCRIPTIONS = (
-    SwitchEntityDescription(
-        key="mock_solar",
-        name="Integration Switch",
-        icon="mdi:format-quote-close",
-    ),
+SWITCHES = (
+    ("charger_charge_control", "Charger charge control", "charger_enabled"),
+    ("charger_connected", "EV connected", "charger_connected"),
+    ("charger_force_finishing", "Charging finished", "charger_force_finishing"),
+    ("grid_override_enabled", "Grid override enabled", "grid_override_enabled"),
 )
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,  # noqa: ARG001 Unused function argument: `hass`
-    entry: IntegrationBlueprintConfigEntry,
+    hass: HomeAssistant,  # noqa: ARG001 HA platform interface
+    entry: MockSolarConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up the switch platform."""
-    async_add_entities(
-        IntegrationBlueprintSwitch(
-            coordinator=entry.runtime_data.coordinator,
-            entity_description=entity_description,
-        )
-        for entity_description in ENTITY_DESCRIPTIONS
-    )
+    """Set up standard switches for local simulation controls."""
+    async_add_entities(MockSolarSwitch(entry.runtime_data, *item) for item in SWITCHES)
 
 
-class IntegrationBlueprintSwitch(IntegrationBlueprintEntity, SwitchEntity):
-    """mock_solar switch class."""
+class MockSolarSwitch(MockSolarEntity, SwitchEntity):
+    """One boolean input; enabling charging need not imply power flow."""
 
     def __init__(
         self,
-        coordinator: BlueprintDataUpdateCoordinator,
-        entity_description: SwitchEntityDescription,
+        coordinator: MockSolarCoordinator,
+        key: str,
+        name: str,
+        attribute: str,
     ) -> None:
-        """Initialize the switch class."""
-        super().__init__(coordinator)
-        self.entity_description = entity_description
+        """Describe the model boolean controlled by this switch."""
+        super().__init__(coordinator, key, name)
+        self.entity_id = f"switch.mock_{key}"
+        self._attribute = attribute
 
     @property
     def is_on(self) -> bool:
-        """Return true if the switch is on."""
-        return self.coordinator.data.get("title", "") == "foo"
+        """Return the actual control state."""
+        return getattr(self.coordinator.data, self._attribute)
 
     async def async_turn_on(self, **_: Any) -> None:
-        """Turn on the switch."""
-        await self.coordinator.config_entry.runtime_data.client.async_set_title("bar")
-        await self.coordinator.async_request_refresh()
+        """Enable this input and immediately recalculate outputs."""
+        self.coordinator.set_input(self._attribute, value=True)
 
     async def async_turn_off(self, **_: Any) -> None:
-        """Turn off the switch."""
-        await self.coordinator.config_entry.runtime_data.client.async_set_title("foo")
-        await self.coordinator.async_request_refresh()
+        """Disable this input and immediately recalculate outputs."""
+        self.coordinator.set_input(self._attribute, value=False)

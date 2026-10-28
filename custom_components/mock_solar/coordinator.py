@@ -1,38 +1,30 @@
-"""DataUpdateCoordinator for mock_solar."""
+"""Publish atomic local simulation snapshots to all entities."""
 
-from __future__ import annotations
+from typing import TYPE_CHECKING
 
-from typing import TYPE_CHECKING, Any
+from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-
-from .api import (
-    IntegrationBlueprintApiClientAuthenticationError,
-    IntegrationBlueprintApiClientError,
-    IntegrationBlueprintApiClientRateLimitError,
-)
+from .const import DOMAIN, LOGGER
+from .simulation import SimulationState
 
 if TYPE_CHECKING:
-    from .data import IntegrationBlueprintConfigEntry
+    from .data import MockSolarConfigEntry
 
 
-# https://developers.home-assistant.io/docs/integration_fetching_data#coordinated-single-api-poll-for-data-for-all-entities
-class BlueprintDataUpdateCoordinator(DataUpdateCoordinator):
-    """Class to manage fetching data from the API."""
+class MockSolarCoordinator(DataUpdateCoordinator[SimulationState]):
+    """Event-driven coordinator; no network polling or background timers."""
 
-    config_entry: IntegrationBlueprintConfigEntry
+    def __init__(self, hass: HomeAssistant, entry: MockSolarConfigEntry) -> None:
+        """Initialize the simulator with repeatable prototype defaults."""
+        super().__init__(hass, LOGGER, name=DOMAIN, config_entry=entry)
+        self.async_set_updated_data(SimulationState())
 
-    async def _async_update_data(self) -> Any:
-        """Update data via library."""
-        try:
-            return await self.config_entry.runtime_data.client.async_get_data()
-        except IntegrationBlueprintApiClientAuthenticationError as exception:
-            raise ConfigEntryAuthFailed(exception) from exception
-        except IntegrationBlueprintApiClientRateLimitError as exception:
-            raise UpdateFailed(
-                exception,
-                retry_after=exception.retry_after,
-            ) from exception
-        except IntegrationBlueprintApiClientError as exception:
-            raise UpdateFailed(exception) from exception
+    @callback
+    def set_input(self, key: str, *, value: float | bool) -> None:
+        """Validate one command and immediately notify every entity."""
+        self.async_set_updated_data(self.data.with_input(key, value=value))
+
+    async def _async_update_data(self) -> SimulationState:
+        """Return local state for explicit Home Assistant refresh requests."""
+        return self.data

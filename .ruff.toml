@@ -23,3 +23,7 @@ keep-runtime-typing = true
 
 [lint.mccabe]
 max-complexity = 25
+
+[lint.per-file-ignores]
+# Tests use the standard-library unittest runner and assertions.
+"tests/*.py" = ["PT009", "PT027"]

@@ -1,8 +1,8 @@
-"""Constants for mock_solar."""
+"""Constants for the local Mock Solar simulator."""
 
-from logging import Logger, getLogger
-
-LOGGER: Logger = getLogger(__package__)
+from logging import getLogger
 
 DOMAIN = "mock_solar"
-ATTRIBUTION = "Data provided by http://jsonplaceholder.typicode.com/"
+LOGGER = getLogger(__package__)
+
+CONFIG_VERSION = 2
