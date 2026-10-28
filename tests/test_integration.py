@@ -19,8 +19,8 @@ class IntegrationTests(HomeAssistantTestCase):
         entities = entity_registry.async_entries_for_config_entry(
             registry, entry.entry_id
         )
-        self.assertEqual(len(entities), 31)
-        self.assertEqual(len({e.unique_id for e in entities}), 31)
+        self.assertEqual(len(entities), 38)
+        self.assertEqual(len({e.unique_id for e in entities}), 38)
         self.assertEqual(self.number_value("sensor.mock_grid_power"), -4)
         self.assertEqual(self.number_value("sensor.mock_ev_battery_soc"), 50)
         for entity_id, device_class, unit in (

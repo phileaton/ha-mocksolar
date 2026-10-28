@@ -1,8 +1,8 @@
 # Mock Solar
 
 Mock Solar is a local Home Assistant energy simulator for testing automations
-without physical hardware. This project is a work in prograss and is being mostly vibe coded. The first implementation provides a manual solar,
-household load, home battery, grid and EV charger model through **31 native
+without physical hardware. This project is a work in prograss and is being mostly vibe coded. The integration models solar production, household load, home battery storage,
+grid exchange and EV charging in manual or dynamic mode through **38 native
 entities**. It does not connect to real devices or external APIs.
 
 ## Install and configure
@@ -71,10 +71,52 @@ exposes `override_enabled` and `calculated_power_kw` attributes.
 | Enabled with insufficient current | `charger_wait` | SuspendedEVSE |
 | Connected but disabled | `charger_wait` | Preparing |
 
-SOC is manually adjustable; it does not advance or stop charging automatically.
+## Dynamic simulation
+
+Manual mode is the default and preserves independent SOC/power controls. Turn on
+`switch.mock_dynamic_enabled` to update SOC from elapsed time, with one update
+per real second. These additional controls configure the model:
+
+| Control | Default | Range / behavior |
+| --- | --- | --- |
+| `number.mock_battery_capacity_kwh` | 13.5 kWh | 1–100 kWh home battery capacity |
+| `number.mock_ev_capacity_kwh` | 80 kWh | 1–200 kWh EV battery capacity |
+| `number.mock_ev_charging_efficiency` | 95% | 1–100% of charger energy stored in EV |
+| `number.mock_ev_target_soc` | 80% | 0–100% charging target |
+| `number.mock_simulation_speed` | 1 | 1–3600 times real elapsed time |
+| `button.mock_reset_simulator` | — | Restore every default and return to manual mode |
+
+For a quick session, set the session limit to 16 A, enable charging, set speed
+to 60 and enable dynamic mode. One real minute represents one simulated hour:
+at 3.84 kW and 95% efficiency, an 80 kWh EV gains 4.56 percentage points of SOC
+unless it reaches its target first.
+
+In dynamic mode:
+
+- EV charging stops at target SOC and reports `charger_end` / Finishing. The
+  charge-enable switch remains on, representing the commanded permission.
+- Raising the target above current SOC or lowering SOC allows charging to resume
+  if connected and enabled. The force-finished switch remains a separate manual
+  override and is not switched on by automatic completion.
+- Home battery power stops at 0% while discharging or 100% while charging. The
+  power-setting number retains its requested value; both battery telemetry
+  outputs show actual flow. Reversing direction permits flow again.
+- Home battery storage is ideal (100% efficient); EV efficiency applies only to
+  energy entering the EV battery. Grid balance always uses actual power.
+- Turning dynamic mode off freezes both SOC values and restores unrestricted
+  manual power behavior. Time spent in manual mode is not replayed on resume.
+- Power, capacity, efficiency and speed commands settle the preceding interval
+  under its old settings before applying the change. Delayed timer callbacks
+  use actual monotonic elapsed time, rather than assuming exactly one second.
+
+SOC can still be adjusted directly for testing. This is a constant-power model
+with instantaneous stop at energy limits; it does not model charging taper,
+weather curves or inverter control. Accelerated time affects only Mock Solar's
+SOC evolution, not other integrations' debounce, scheduling or rate limits.
+
 **Reloading the integration or restarting Home Assistant resets all inputs to
-these defaults.** Capacities, efficiency, target SOC, persistence, accelerated
-time and scenario resets are deferred to the dynamic simulation milestone.
+the defaults and starts in manual mode.** There is no persistence or simulation
+of time spent offline. Use the reset button to repeat a scenario without reload.
 
 ## Migrating the YAML prototype
 
@@ -115,7 +157,8 @@ ruff format . --check
 Tests run the model and real Home Assistant 2026.6.4 platforms using temporary
 configuration directories. They cover power balance, status priority, bounds,
 external service commands, metadata, ID collisions, sample-entry migration and
-unload/reload and watt/sign adapters, with HTTP requests blocked during integration
+unload/reload, watt/sign adapters, dynamic energy limits, accelerated time,
+reset and a real Home Assistant timer callback, with HTTP requests blocked during integration
 operations. An optional [upstream contract test](docs/ev-smart-charger.md#repeat-the-contract-test)
 runs against an external EV Smart Charger source checkout; it is skipped unless
 `MOCK_SOLAR_EVSC_PATH` is set.

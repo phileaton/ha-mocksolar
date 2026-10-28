@@ -1,4 +1,4 @@
-"""Pure, immutable manual energy model, with powers expressed in kW."""
+"""Pure, immutable manual and elapsed-time energy model, with powers expressed in kW."""
 
 from __future__ import annotations
 
@@ -6,6 +6,7 @@ from dataclasses import dataclass, replace
 from math import isfinite
 
 MIN_CHARGING_CURRENT = 6
+MAX_SOC = 100
 
 # Minimum, maximum and step; shared by validation and native number entities.
 NUMBER_LIMITS = {
@@ -17,8 +18,14 @@ NUMBER_LIMITS = {
     "charger_max_amps_setting": (6, 40, 1),
     "charger_session_amps_setting": (0, 40, 1),
     "ev_soc_setting": (0, 100, 1),
+    "battery_capacity_kwh": (1, 100, 0.1),
+    "ev_capacity_kwh": (1, 200, 1),
+    "ev_charging_efficiency": (1, 100, 1),
+    "ev_target_soc": (0, 100, 1),
+    "simulation_speed": (1, 3600, 1),
 }
 SWITCH_KEYS = (
+    "dynamic_enabled",
     "grid_override_enabled",
     "charger_connected",
     "charger_enabled",
@@ -38,6 +45,12 @@ class SimulationState:
     charger_max_amps_setting: float = 16
     charger_session_amps_setting: float = 0
     ev_soc_setting: float = 50
+    battery_capacity_kwh: float = 13.5
+    ev_capacity_kwh: float = 80
+    ev_charging_efficiency: float = 95
+    ev_target_soc: float = 80
+    simulation_speed: float = 1
+    dynamic_enabled: bool = False
     grid_override_enabled: bool = False
     charger_connected: bool = True
     charger_enabled: bool = False
@@ -67,6 +80,57 @@ class SimulationState:
             raise ValueError(msg)
         return replace(self, **{key: value})
 
+    def advance(self, elapsed_seconds: float) -> SimulationState:
+        """Advance real elapsed seconds, scaling time and limiting stored energy."""
+        if (
+            isinstance(elapsed_seconds, bool)
+            or not isinstance(elapsed_seconds, (int, float))
+            or not isfinite(elapsed_seconds)
+            or elapsed_seconds < 0
+        ):
+            msg = "Elapsed seconds must be finite and nonnegative"
+            raise ValueError(msg)
+        if not self.dynamic_enabled or elapsed_seconds == 0:
+            return self
+        hours = elapsed_seconds / 3600 * self.simulation_speed
+        battery_soc = min(
+            100,
+            max(
+                0,
+                self.battery_soc_setting
+                - self.battery_power * hours / self.battery_capacity_kwh * 100,
+            ),
+        )
+        ev_soc = self.ev_soc_setting
+        if self.charger_power > 0:
+            ev_soc = min(
+                self.ev_target_soc,
+                ev_soc
+                + self.charger_power
+                * hours
+                * (self.ev_charging_efficiency / 100)
+                / self.ev_capacity_kwh
+                * 100,
+            )
+        return replace(self, battery_soc_setting=battery_soc, ev_soc_setting=ev_soc)
+
+    @property
+    def battery_power(self) -> float:
+        """Return actual battery flow, retaining the manual setting at energy bounds."""
+        if self.dynamic_enabled and (
+            (self.battery_soc_setting <= 0 and self.battery_kw > 0)
+            or (self.battery_soc_setting >= MAX_SOC and self.battery_kw < 0)
+        ):
+            return 0
+        return self.battery_kw
+
+    @property
+    def charging_finished(self) -> bool:
+        """Combine explicit finish control with dynamic target completion."""
+        return self.charger_force_finishing or (
+            self.dynamic_enabled and self.ev_soc_setting >= self.ev_target_soc
+        )
+
     @property
     def charger_current(self) -> float:
         """Return permitted active current; subminimum settings suspend charging."""
@@ -76,7 +140,7 @@ class SimulationState:
         if (
             not self.charger_connected
             or not self.charger_enabled
-            or self.charger_force_finishing
+            or self.charging_finished
             or permitted < MIN_CHARGING_CURRENT
         ):
             return 0
@@ -95,7 +159,7 @@ class SimulationState:
     @property
     def calculated_grid_power(self) -> float:
         """Return balanced grid exchange, positive import, negative export."""
-        return round(self.home_load - self.solar_kw - self.battery_kw, 3)
+        return round(self.home_load - self.solar_kw - self.battery_power, 3)
 
     @property
     def grid_power(self) -> float:
@@ -109,7 +173,7 @@ class SimulationState:
         """Return normalized lifecycle status, with disconnection taking priority."""
         if not self.charger_connected:
             return "charger_free"
-        if self.charger_force_finishing:
+        if self.charging_finished:
             return "charger_end"
         if self.charger_power > 0:
             return "charger_charging"

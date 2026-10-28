@@ -52,10 +52,16 @@ this upstream controller). Map automation to the **session limit**, keeping that
 ceiling independent. Changing the ceiling can limit actual draw below the
 session setting; an enabled switch alone does not prove that power is flowing.
 
-SOC is manual. EV SOC at 100% does not automatically finish charging, and home
-battery SOC does not constrain battery power. Set finished/connected controls
-explicitly. Settings reset on simulator reload/restart. Automatic SOC and energy
-limits are deferred to the dynamic model.
+Manual mode keeps SOC independent of power. Enable `switch.mock_dynamic_enabled`
+for automatic SOC evolution, EV target completion and empty/full home battery
+limits. The simulator target is `number.mock_ev_target_soc`; match it to the
+upstream target when appropriate. Upstream may stop earlier under its own policy.
+The force-finished and connected controls remain available for manual scenarios.
+
+Simulation speed accelerates only local SOC evolution. It does not accelerate
+upstream command delays, debounce, time windows or scheduling. Start at 1x for
+paired validation; high speeds can complete a session before an upstream control
+cycle runs. Reset/reload returns to manual mode with default settings.
 
 ## What was tested
 

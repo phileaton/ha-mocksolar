@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Create Mock Solar simulator",
-        "description": "Create a local manual energy simulator. No hardware or credentials are needed. Values reset to defaults when the integration reloads or Home Assistant restarts."
+        "description": "Create a local energy simulator. No hardware or credentials are needed. Starts in manual mode; enable dynamic simulation to advance battery SOC. Values reset to defaults when the integration reloads or Home Assistant restarts."
       }
     },
     "abort": {

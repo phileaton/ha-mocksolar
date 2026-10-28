@@ -51,7 +51,7 @@ SENSORS = (
     (
         "battery_power",
         "Battery power",
-        "battery_kw",
+        "battery_power",
         SensorDeviceClass.POWER,
         UnitOfPower.KILO_WATT,
     ),
@@ -111,7 +111,7 @@ COMPATIBILITY_SENSORS = (
     (
         "battery_power_charge_positive_w",
         "Battery power W (positive charging)",
-        "battery_kw",
+        "battery_power",
         -1000,
     ),
 )

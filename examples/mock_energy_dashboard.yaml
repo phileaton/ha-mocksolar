@@ -5,12 +5,19 @@ views:
     icon: mdi:solar-power
     cards:
       - type: entities
+        title: Simulation Mode
+        entities:
+          - switch.mock_dynamic_enabled
+          - number.mock_simulation_speed
+          - button.mock_reset_simulator
+      - type: entities
         title: Simulation Inputs
         entities:
           - number.mock_solar_kw
           - number.mock_house_kw
           - number.mock_battery_kw
           - number.mock_battery_soc_setting
+          - number.mock_battery_capacity_kwh
           - switch.mock_grid_override_enabled
           - number.mock_grid_override_kw
       - type: entities
@@ -39,6 +46,9 @@ views:
         title: Electric Vehicle
         entities:
           - number.mock_ev_soc_setting
+          - number.mock_ev_capacity_kwh
+          - number.mock_ev_charging_efficiency
+          - number.mock_ev_target_soc
           - sensor.mock_ev_battery_soc
       - type: entities
         title: Compatibility Telemetry (W)

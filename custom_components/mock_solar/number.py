@@ -3,7 +3,12 @@
 from typing import TYPE_CHECKING
 
 from homeassistant.components.number import NumberEntity, NumberMode
-from homeassistant.const import PERCENTAGE, UnitOfElectricCurrent, UnitOfPower
+from homeassistant.const import (
+    PERCENTAGE,
+    UnitOfElectricCurrent,
+    UnitOfEnergy,
+    UnitOfPower,
+)
 from homeassistant.exceptions import HomeAssistantError
 
 from .entity import MockSolarEntity
@@ -36,6 +41,26 @@ NUMBERS = (
         UnitOfElectricCurrent.AMPERE,
     ),
     ("ev_soc_setting", "EV SOC setting", "ev_soc_setting", PERCENTAGE),
+    (
+        "battery_capacity_kwh",
+        "Home battery capacity",
+        "battery_capacity_kwh",
+        UnitOfEnergy.KILO_WATT_HOUR,
+    ),
+    (
+        "ev_capacity_kwh",
+        "EV battery capacity",
+        "ev_capacity_kwh",
+        UnitOfEnergy.KILO_WATT_HOUR,
+    ),
+    (
+        "ev_charging_efficiency",
+        "EV charging efficiency",
+        "ev_charging_efficiency",
+        PERCENTAGE,
+    ),
+    ("ev_target_soc", "EV target SOC", "ev_target_soc", PERCENTAGE),
+    ("simulation_speed", "Simulation speed multiplier", "simulation_speed", None),
 )
 
 
@@ -59,7 +84,7 @@ class MockSolarNumber(MockSolarEntity, NumberEntity):
         key: str,
         name: str,
         attribute: str,
-        unit: str,
+        unit: str | None,
     ) -> None:
         """Initialize bounds and units from the model contract."""
         super().__init__(coordinator, key, name)

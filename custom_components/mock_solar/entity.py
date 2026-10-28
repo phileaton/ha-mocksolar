@@ -22,5 +22,5 @@ class MockSolarEntity(CoordinatorEntity[MockSolarCoordinator]):
             identifiers={(DOMAIN, coordinator.config_entry.entry_id)},
             name="Mock Solar",
             manufacturer="Mock Solar",
-            model="Manual energy simulator",
+            model="Energy simulator",
         )

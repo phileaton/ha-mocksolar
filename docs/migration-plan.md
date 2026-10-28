@@ -7,14 +7,18 @@ comes from the supplied handoff and the subsequently supplied original YAML. Ups
 ## Implementation progress
 
 The manual model and native wiring milestones are now implemented: a validated,
-immutable local model, credential-free single-instance setup, 31 native entities,
+immutable local model, credential-free single-instance setup, 38 native entities,
 immediate command updates, blueprint entry migration, and lifecycle tests.
-The optional native dashboard is `examples/mock_energy_dashboard.yaml`. SOC is
-manual and inputs reset on reload/restart. W/sign compatibility outputs are
+The optional native dashboard is `examples/mock_energy_dashboard.yaml`. Manual
+mode remains the default; optional dynamic SOC, capacities, EV charging efficiency,
+target SOC, accelerated time and a reset button are now implemented. Inputs reset
+on reload/restart, without offline catch-up. W/sign compatibility outputs are
 implemented and the actual upstream readers/controller have passed an optional
 contract test. Full scheduling and solar-surplus arbitration still require live
 validation; see [the mapping and test guide](ev-smart-charger.md). Elapsed-time
-simulation is the next implementation milestone. See the README for current installation and controls.
+simulation is now implemented with deterministic energy tests and a real timer
+smoke test. Scenario presets and persistence remain future enhancements. See the
+README for current installation and controls.
 
 The inventory below records the original blueprint assessment. Sample API,
 polling, credentials and example entities have since been replaced; simulation,
@@ -170,5 +174,7 @@ or the prototype battery sign.
 Milestones 1–3 are complete for the manual simulator, including recovery of both
 legacy files. Step 4 now includes W/sign adapters, verified upstream reader and
 controller contracts, and documented entity mappings. Live scheduling/arbitration
-verification remains open. Continue with the dynamic model while preserving that
-validation boundary. The legacy artifacts remain unchanged.
+verification remains open. The dynamic model (step 5) is now implemented with
+an explicit reset-on-reload persistence policy. Continue with scenario presets
+and distribution preparation while preserving the live-validation boundary.
+The legacy artifacts remain unchanged.

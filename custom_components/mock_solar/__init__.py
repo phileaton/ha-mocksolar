@@ -12,11 +12,17 @@ if TYPE_CHECKING:
 
     from .data import MockSolarConfigEntry
 
-PLATFORMS = [Platform.SENSOR, Platform.NUMBER, Platform.SWITCH, Platform.BINARY_SENSOR]
+PLATFORMS = [
+    Platform.SENSOR,
+    Platform.NUMBER,
+    Platform.SWITCH,
+    Platform.BINARY_SENSOR,
+    Platform.BUTTON,
+]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: MockSolarConfigEntry) -> bool:
-    """Set up a manual simulator without cloud credentials."""
+    """Set up a local simulator, starting in manual mode."""
     entry.runtime_data = MockSolarCoordinator(hass, entry)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
