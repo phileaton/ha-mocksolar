@@ -1,7 +1,7 @@
 # Mock Solar
 
 Mock Solar is a local Home Assistant energy simulator for testing automations
-without physical hardware. The first implementation provides a manual solar,
+without physical hardware. This project is a work in prograss and is being mostly vibe coded. The first implementation provides a manual solar,
 household load, home battery, grid and EV charger model through **24 native
 entities**. It does not connect to real devices or external APIs.
 
