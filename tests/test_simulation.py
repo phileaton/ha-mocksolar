@@ -10,25 +10,26 @@ class SimulationTests(unittest.TestCase):
     """Exercise physics and lifecycle behavior independently of HA entities."""
 
     def test_defaults_and_discharge_sign(self) -> None:
-        """Default charging battery increases grid import relative to idle."""
+        """Surplus charges the battery (negative) and a deficit discharges it."""
         state = SimulationState()
         self.assertEqual(state.charger_power, 0)
         self.assertEqual(state.home_load, 2)
-        self.assertEqual(state.grid_power, -4)
-        self.assertEqual(replace(state, battery_kw=2).grid_power, -8)
-        self.assertEqual(replace(state, solar_kw=0).grid_power, 4)
+        self.assertEqual(state.battery_power, -6)
+        self.assertEqual(state.grid_power, 0)
+        self.assertEqual(replace(state, solar_kw=0).battery_power, 2)
+        self.assertEqual(replace(state, solar_kw=0).grid_power, 0)
 
     def test_handoff_energy_balance(self) -> None:
-        """Eight kW solar and six kW load with one kW battery charge exports one."""
+        """Eight kW solar and six kW load charges the battery by two."""
         state = SimulationState(
-            battery_kw=-1,
             charger_enabled=True,
             charger_max_amps_setting=40,
             charger_session_amps_setting=4000 / 240,
         )
         self.assertEqual(state.charger_power, 4)
         self.assertEqual(state.home_load, 6)
-        self.assertEqual(state.grid_power, -1)
+        self.assertEqual(state.battery_power, -2)
+        self.assertEqual(state.grid_power, 0)
 
     def test_both_current_limits(self) -> None:
         """Either current setting can constrain the EV independently."""
@@ -80,25 +81,27 @@ class SimulationTests(unittest.TestCase):
                 self.assertEqual(state.charger_status_connector, connector)
                 self.assertEqual(state.charger_power, power)
 
-    def test_override_keeps_battery_and_calculated_grid(self) -> None:
-        """A deliberately forced reading does not silently balance the battery."""
-        state = SimulationState(grid_override_enabled=True, grid_override_kw=7)
-        self.assertEqual(state.grid_power, 7)
-        self.assertEqual(state.calculated_grid_power, -4)
-        self.assertEqual(state.battery_kw, -2)
-        self.assertEqual(replace(state, grid_override_enabled=False).grid_power, -4)
+    def test_battery_limits_and_grid_remainder(self) -> None:
+        """Battery is capped; empty or full batteries leave the rest to the grid."""
+        big = SimulationState(solar_kw=20, house_kw=0)
+        self.assertEqual(big.battery_power, -12)
+        self.assertEqual(big.grid_power, -8)
+        full = replace(SimulationState(), battery_soc_setting=100)
+        self.assertEqual(full.battery_power, 0)
+        self.assertEqual(full.grid_power, -6)
+        empty = replace(SimulationState(solar_kw=0), battery_soc_setting=0)
+        self.assertEqual(empty.battery_power, 0)
+        self.assertEqual(empty.grid_power, 2)
 
     def test_bounds_and_nonfinite_values(self) -> None:
         """Invalid inputs cannot contaminate shared state or produce NaN output."""
         for key, value in (
             ("solar_kw", -1),
             ("house_kw", 21),
-            ("battery_kw", 13),
-            ("battery_soc_setting", 101),
+                        ("battery_soc_setting", 101),
             ("ev_soc_setting", -1),
             ("charger_max_amps_setting", 0),
             ("charger_session_amps_setting", 41),
-            ("grid_override_kw", float("inf")),
             ("solar_kw", float("nan")),
             ("house_kw", True),
         ):
@@ -115,6 +118,6 @@ class SimulationTests(unittest.TestCase):
         updated = state.with_input("solar_kw", value=10)
         self.assertEqual(state.solar_kw, 8)
         self.assertEqual(updated.grid_power, 0)
-        self.assertEqual(updated.battery_kw, -8)
+        self.assertEqual(updated.battery_power, -8)
         with self.assertRaises(FrozenInstanceError):
             state.solar_kw = 0

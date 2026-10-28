@@ -2,7 +2,7 @@
 
 Mock Solar is a local Home Assistant energy simulator for testing automations
 without physical hardware. This project is a work in prograss and is being mostly vibe coded. The integration models solar production, household load, home battery storage,
-grid exchange and EV charging in manual or dynamic mode through **39 native
+grid exchange and EV charging in manual or dynamic mode through **33 native
 entities**. It does not connect to real devices or external APIs.
 
 ## Install and configure
@@ -10,12 +10,12 @@ entities**. It does not connect to real devices or external APIs.
 1. Copy `custom_components/mock_solar` into your Home Assistant configuration's
    `custom_components` directory, then restart Home Assistant.
 2. Open **Settings → Devices & services → Add integration → Mock Solar** and
-   leave **Create Mock Energy Lab dashboard** checked and confirm creation.
+   leave **Create Energy Lab dashboard** checked and confirm creation.
    No credentials are required. One simulator is supported.
-3. Open **Mock Energy Lab** in the sidebar, or use the Mock Solar device's controls.
+3. Open **Energy Lab** in the sidebar, or use the Mock Solar device's controls.
 
 For an existing installation, open **Settings → Devices & services → Mock Solar →
-Configure** and enable **Create Mock Energy Lab dashboard**. Changing this option
+Configure** and enable **Create Energy Lab dashboard**. Changing this option
 creates the dashboard without resetting the running simulation. Existing entries
 start with dashboard creation disabled until you opt in.
 
@@ -51,18 +51,16 @@ remain future work; this is a development implementation.
 | --- | --- | --- |
 | `number.mock_solar_kw` | 8 kW | 0–20 kW solar production |
 | `number.mock_house_kw` | 2 kW | 0–20 kW household load excluding EV |
-| `number.mock_battery_kw` | -2 kW | -12–12 kW; positive discharge, negative charge |
 | `number.mock_battery_soc_setting` | 65% | 0–100% home battery SOC |
-| `number.mock_grid_override_kw` | 0 kW | -20–20 kW forced grid reading |
 | `number.mock_charger_maximum_current` | 16 A | 6–40 A hardware ceiling |
 | `number.mock_charger_session_current_limit` | 0 A | 0–40 A external automation limit |
 | `number.mock_ev_soc_setting` | 50% | 0–100% EV SOC |
 | `switch.mock_charger_charge_control` | off | Enable charging |
 | `switch.mock_charger_connected` | on | EV plugged in |
 | `switch.mock_charger_force_finishing` | off | Session finished |
-| `switch.mock_grid_override_enabled` | off | Use forced grid reading |
 
-Commands immediately update all dependent telemetry. Current is the lesser of
+Battery and grid power are not controls: they are calculated from solar
+production, home load and EV power. Commands immediately update all dependent telemetry. Current is the lesser of
 the two limits; charging draws no power if disconnected, disabled, finished or
 below 6 A. EV power is calculated at 240 V single phase.
 
@@ -71,23 +69,25 @@ below 6 A. EV power is calculated at 240 V single phase.
 The original power sensors use kW; compatibility outputs use W. Both SOC
 sensors use percent with battery device class.
 
-- `sensor.mock_solar_power`, `sensor.mock_home_base_load`, `sensor.mock_home_load`
+- `sensor.mock_solar_power`, `sensor.mock_home_load` (including EV)
 - `sensor.mock_battery_power`, `sensor.mock_battery_soc`
-- `sensor.mock_grid_power`, `sensor.mock_calculated_grid_power`
+- `sensor.mock_grid_power`
 - `sensor.mock_charger_power`, `sensor.mock_ev_battery_soc`
 - `sensor.mock_charger_state`, `sensor.mock_charger_status_connector`
 - `binary_sensor.mock_ev_connected`
 
 ```text
 EV power = 240 × permitted current / 1000
-Total home load = base home load + EV power
-Calculated grid power = total home load - solar power - battery power
+Total home load = home load (excluding EV) + EV power
+Battery power = total home load - solar power, limited to ±12 kW
+Grid power = total home load - solar power - battery power
 ```
 
-Grid power is positive for import and negative for export. The defaults produce
-**-4 kW export**. Enabling grid override changes only the effective grid reading;
-it leaves battery power and calculated grid power intact. The grid sensor also
-exposes `override_enabled` and `calculated_power_kw` attributes.
+Battery power is positive when discharging and negative when charging. The
+battery absorbs any surplus or deficit up to 12 kW, and stops at 0% (discharge)
+or 100% (charge) SOC. Grid power is positive for import and negative for export;
+it covers only what solar and the battery cannot. The defaults produce a
+**-6 kW** battery charge and **0 kW** grid exchange.
 
 | Condition, in priority order | Normalized charger state | Connector state |
 | --- | --- | --- |
@@ -125,8 +125,8 @@ In dynamic mode:
   if connected and enabled. The force-finished switch remains a separate manual
   override and is not switched on by automatic completion.
 - Home battery power stops at 0% while discharging or 100% while charging. The
-  power-setting number retains its requested value; both battery telemetry
-  outputs show actual flow. Reversing direction permits flow again.
+  battery power sensors show zero flow and the grid covers the remainder.
+  Reversing direction permits flow again.
 - Home battery storage is ideal (100% efficient); EV efficiency applies only to
   energy entering the EV battery. Grid balance always uses actual power.
 - Turning dynamic mode off freezes both SOC values and restores unrestricted

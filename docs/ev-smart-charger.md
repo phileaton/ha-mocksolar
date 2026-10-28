@@ -12,7 +12,7 @@ Use the actual IDs assigned by your Home Assistant registry if they have suffixe
 | EV Smart Charger input | Mock Solar entity | Unit / meaning |
 | --- | --- | --- |
 | Solar production | `sensor.mock_solar_power_w` | W |
-| Home consumption | `sensor.mock_home_base_load_w` | W, excludes EV |
+| Home consumption | `sensor.mock_house_load_w` | W, excludes EV |
 | Grid import | `sensor.mock_grid_power_w` | W, positive import, negative export |
 | Home battery power | `sensor.mock_battery_power_charge_positive_w` | W, positive charge, negative discharge |
 | Home battery SOC | `sensor.mock_battery_soc` | % |
@@ -22,7 +22,7 @@ Use the actual IDs assigned by your Home Assistant registry if they have suffixe
 | Charger switch | `switch.mock_charger_charge_control` | Start/stop command |
 | Charger current | `number.mock_charger_session_current_limit` | A |
 
-The home-consumption mapping deliberately uses **base household load**. Upstream
+The home-consumption mapping deliberately uses the **home load excluding EV**. Upstream
 calculates a target EV current from `production - consumption`; including EV load
 in that input reduces the available budget as the charger starts. The total
 household reading remains available as `sensor.mock_home_load_w` for observation.
@@ -33,9 +33,9 @@ Keep the watt sensors configured to **W** in Home Assistant. Upstream's producti
 consumption, grid and battery readers use numeric states without converting their
 unit attributes. Its measured charger-power reader separately supports kW.
 
-Also available: `sensor.mock_calculated_grid_power_w` (unforced balanced grid),
-`sensor.mock_home_load_w` (total including EV), and the kW equivalents. Both
-effective grid sensors expose `override_enabled` and `calculated_power_kw`.
+Also available: `sensor.mock_home_load_w` (total including EV) and the kW
+equivalents. Battery and grid power are calculated from solar, home load and EV
+power, so there is no grid override.
 The battery adapter exposes `positive_direction: charging`.
 
 ## Limits of the pairing
@@ -115,8 +115,7 @@ versions can change the contract; record the version/revision when testing them.
 
 ## Live validation checklist
 
-Use the native dashboard to establish repeatable conditions. Start with grid
-override off, battery power zero, an EV connected and not finished, and EV SOC
+Use the native dashboard to establish repeatable conditions. Start with an EV connected and not finished, and EV SOC
 below EV Smart Charger's target. Match its time window and priority settings to
 the scenario and allow its configured debounce/rate-limit delays to elapse.
 
@@ -126,11 +125,11 @@ the scenario and allow its configured debounce/rate-limit delays to elapse.
 2. Reduce solar production and observe current reduction or stop; restore it and
    observe recovery. Record the policy/settings and delays rather than assuming
    a fixed response time.
-3. Test battery power in each direction and confirm the selected watt adapter
+3. Change solar and home load so the battery charges and discharges, and confirm the selected watt adapter
    reverses sign relative to the original kW battery sensor.
 4. Unplug or mark finished; verify zero measured draw and the normalized lifecycle
    state. An external enable command must still produce zero draw while unplugged.
-5. Enable grid override for an intentional import/export signal; check its
-   override indication and the separate calculated grid reading.
+5. Drain or fill the home battery (SOC 0% or 100%) and confirm the grid takes
+   the remaining import or export.
 
 This live checklist has not been executed against a running paired installation.

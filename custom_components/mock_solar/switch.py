@@ -18,7 +18,6 @@ SWITCHES = (
     ("charger_charge_control", "Charger charge control", "charger_enabled"),
     ("charger_connected", "EV connected", "charger_connected"),
     ("charger_force_finishing", "Force charging finished", "charger_force_finishing"),
-    ("grid_override_enabled", "Grid override enabled", "grid_override_enabled"),
 )
 
 

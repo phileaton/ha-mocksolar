@@ -147,7 +147,7 @@ class MockSolarDashboard:
             collection = dashboard_collection(self.hass)
             item = await collection.async_create_item(
                 {
-                    "title": "Mock Energy Lab",
+                    "title": "Energy Lab",
                     "icon": "mdi:solar-power",
                     "url_path": path,
                     "show_in_sidebar": True,

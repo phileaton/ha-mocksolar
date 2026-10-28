@@ -5,7 +5,7 @@
         "title": "Create Mock Solar simulator",
         "description": "Create a local energy simulator. No hardware or credentials are needed. Starts in manual mode; enable dynamic simulation to advance battery SOC. Values reset to defaults when the integration reloads or Home Assistant restarts.",
         "data": {
-          "create_dashboard": "Create Mock Energy Lab dashboard"
+          "create_dashboard": "Create Energy Lab dashboard"
         }
       }
     },
@@ -18,9 +18,9 @@
     "step": {
       "init": {
         "title": "Mock Solar dashboard",
-        "description": "Create an editable Mock Energy Lab dashboard. Existing dashboard edits are preserved. Turning this off leaves any dashboard already created in place. Use the Regenerate dashboard button to explicitly replace its layout.",
+        "description": "Create an editable Energy Lab dashboard. Existing dashboard edits are preserved. Turning this off leaves any dashboard already created in place. Use the Regenerate dashboard button to explicitly replace its layout.",
         "data": {
-          "create_dashboard": "Create Mock Energy Lab dashboard"
+          "create_dashboard": "Create Energy Lab dashboard"
         }
       }
     }

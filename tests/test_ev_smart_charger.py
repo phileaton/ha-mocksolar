@@ -44,7 +44,7 @@ class EVSmartChargerContractTests(HomeAssistantTestCase):
             "phase_mode": "single",
             "charger_model": "generic",
             "fv_production": "sensor.mock_solar_power_w",
-            "home_consumption": "sensor.mock_home_base_load_w",
+            "home_consumption": "sensor.mock_house_load_w",
             "grid_import": "sensor.mock_grid_power_w",
             "battery_power": "sensor.mock_battery_power_charge_positive_w",
             "charging_power": "sensor.mock_charger_power_w",
@@ -62,8 +62,8 @@ class EVSmartChargerContractTests(HomeAssistantTestCase):
         await controller.async_setup()
         self.assertEqual(model.read_production(self.hass), 8000)
         self.assertEqual(model.read_consumption(self.hass), 2000)
-        self.assertEqual(model.read_grid_import(self.hass), -4000)
-        self.assertEqual(model.read_battery_discharge(self.hass), 0)
+        self.assertEqual(model.read_grid_import(self.hass), 0)
+        self.assertEqual(model.read_battery_discharge(self.hass), -6000)
         self.assertFalse(model.is_charging(self.hass))
         # Omit intentional upstream hardware settling delays, retaining its real
         # command paths, services, state reads and current normalization.
@@ -82,7 +82,7 @@ class EVSmartChargerContractTests(HomeAssistantTestCase):
             self.assertTrue(model.is_charging(self.hass))
             self.assertEqual(model.read_consumption(self.hass), 2000)
             self.assertEqual(self.number_value("sensor.mock_home_load_w"), 5840)
-            self.assertEqual(model.read_grid_import(self.hass), -160)
+            self.assertEqual(model.read_grid_import(self.hass), 0)
             result = await controller.set_amperage(6, "Reduce current")
             self.assertTrue(result.success, result.error_message)
             await self.hass.async_block_till_done()
@@ -90,7 +90,7 @@ class EVSmartChargerContractTests(HomeAssistantTestCase):
             # Exercise the actual upstream solar-surplus amperage helper with a
             # lower production reading, without enabling its scheduler.
             await self.command("number", "set_value", "number.mock_solar_kw", value=2)
-            self.assertEqual(model.read_grid_import(self.hass), 3440)
+            self.assertEqual(model.read_grid_import(self.hass), 0)
             surplus = model.read_production(self.hass) - model.read_consumption(
                 self.hass
             )
@@ -114,8 +114,8 @@ class EVSmartChargerContractTests(HomeAssistantTestCase):
             self.assertTrue(result.success, result.error_message)
             await self.hass.async_block_till_done()
             self.assertEqual(model.read_charging_power(self.hass), 2400)
-            await self.command("number", "set_value", "number.mock_battery_kw", value=2)
-            self.assertEqual(model.read_battery_discharge(self.hass), 2000)
+            await self.command("number", "set_value", "number.mock_solar_kw", value=0)
+            self.assertEqual(model.read_battery_discharge(self.hass), 4400)
             await self.command(
                 "switch", "turn_on", "switch.mock_charger_force_finishing"
             )

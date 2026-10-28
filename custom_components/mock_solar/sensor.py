@@ -28,15 +28,8 @@ SENSORS = (
         UnitOfPower.KILO_WATT,
     ),
     (
-        "home_base_load",
-        "Base home load",
-        "house_kw",
-        SensorDeviceClass.POWER,
-        UnitOfPower.KILO_WATT,
-    ),
-    (
         "home_load",
-        "Home load",
+        "Home load (incl. EV)",
         "home_load",
         SensorDeviceClass.POWER,
         UnitOfPower.KILO_WATT,
@@ -59,13 +52,6 @@ SENSORS = (
         "grid_power",
         "Grid power",
         "grid_power",
-        SensorDeviceClass.POWER,
-        UnitOfPower.KILO_WATT,
-    ),
-    (
-        "calculated_grid_power",
-        "Calculated grid power",
-        "calculated_grid_power",
         SensorDeviceClass.POWER,
         UnitOfPower.KILO_WATT,
     ),
@@ -98,15 +84,9 @@ SENSORS = (
 # Entity key, display name, model attribute, kW-to-W conversion factor.
 COMPATIBILITY_SENSORS = (
     ("solar_power_w", "Solar power W", "solar_kw", 1000),
-    ("home_base_load_w", "Base home load W", "house_kw", 1000),
+    ("house_load_w", "Home load (excl. EV) W", "house_kw", 1000),
     ("home_load_w", "Home load W", "home_load", 1000),
     ("grid_power_w", "Grid power W", "grid_power", 1000),
-    (
-        "calculated_grid_power_w",
-        "Calculated grid power W",
-        "calculated_grid_power",
-        1000,
-    ),
     ("charger_power_w", "Charger power W", "charger_power", 1000),
     (
         "battery_power_charge_positive_w",
@@ -182,12 +162,7 @@ class MockSolarSensor(MockSolarEntity, SensorEntity):
 
     @property
     def extra_state_attributes(self) -> dict[str, bool | float | str] | None:
-        """Make forced grid readings identifiable alongside the calculated value."""
-        if self._key in {"grid_power", "grid_power_w"}:
-            return {
-                "override_enabled": self.coordinator.data.grid_override_enabled,
-                "calculated_power_kw": self.coordinator.data.calculated_grid_power,
-            }
+        """Describe the sign convention of the charge-positive adapter."""
         if self._key == "battery_power_charge_positive_w":
             return {"positive_direction": "charging"}
         return None

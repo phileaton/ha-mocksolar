@@ -1,5 +1,5 @@
 {
-  "title": "Mock Energy Lab",
+  "title": "Energy Lab",
   "views": [
     {
       "title": "Simulator",
@@ -21,16 +21,13 @@
           "entities": [
             "number.mock_solar_kw",
             "number.mock_house_kw",
-            "number.mock_battery_kw",
             "number.mock_battery_soc_setting",
-            "number.mock_battery_capacity_kwh",
-            "switch.mock_grid_override_enabled",
-            "number.mock_grid_override_kw"
+            "number.mock_battery_capacity_kwh"
           ]
         },
         {
           "type": "entities",
-          "title": "Mock Wallbox",
+          "title": "Wallbox",
           "entities": [
             "switch.mock_charger_connected",
             "switch.mock_charger_charge_control",
@@ -47,10 +44,8 @@
           "title": "Simulated Telemetry",
           "entities": [
             "sensor.mock_solar_power",
-            "sensor.mock_home_base_load",
             "sensor.mock_home_load",
             "sensor.mock_grid_power",
-            "sensor.mock_calculated_grid_power",
             "sensor.mock_battery_power",
             "sensor.mock_battery_soc",
             "sensor.mock_charger_power"
@@ -72,10 +67,9 @@
           "title": "Compatibility Telemetry (W)",
           "entities": [
             "sensor.mock_solar_power_w",
-            "sensor.mock_home_base_load_w",
+            "sensor.mock_house_load_w",
             "sensor.mock_home_load_w",
             "sensor.mock_grid_power_w",
-            "sensor.mock_calculated_grid_power_w",
             "sensor.mock_battery_power_charge_positive_w",
             "sensor.mock_charger_power_w"
           ]
@@ -103,7 +97,7 @@
               "entity_id": "button.mock_regenerate_dashboard"
             },
             "confirmation": {
-              "text": "Replace this dashboard with the default Mock Energy Lab layout? Your dashboard edits will be replaced."
+              "text": "Replace this dashboard with the default Energy Lab layout? Your dashboard edits will be replaced."
             }
           }
         }

@@ -7,14 +7,13 @@ from math import isfinite
 
 MIN_CHARGING_CURRENT = 6
 MAX_SOC = 100
+BATTERY_MAX_KW = 12
 
 # Minimum, maximum and step; shared by validation and native number entities.
 NUMBER_LIMITS = {
     "solar_kw": (0, 20, 0.1),
     "house_kw": (0, 20, 0.1),
-    "battery_kw": (-12, 12, 0.1),
     "battery_soc_setting": (0, 100, 1),
-    "grid_override_kw": (-20, 20, 0.1),
     "charger_max_amps_setting": (6, 40, 1),
     "charger_session_amps_setting": (0, 40, 1),
     "ev_soc_setting": (0, 100, 1),
@@ -24,23 +23,8 @@ NUMBER_LIMITS = {
     "ev_target_soc": (0, 100, 1),
     "simulation_speed": (1, 3600, 1),
 }
-# Inputs whose change rebalances battery (and hence grid) power.
-BALANCING_KEYS = frozenset(
-    {
-        "solar_kw",
-        "house_kw",
-        "grid_override_kw",
-        "grid_override_enabled",
-        "charger_max_amps_setting",
-        "charger_session_amps_setting",
-        "charger_connected",
-        "charger_enabled",
-        "charger_force_finishing",
-    }
-)
 SWITCH_KEYS = (
     "dynamic_enabled",
-    "grid_override_enabled",
     "charger_connected",
     "charger_enabled",
     "charger_force_finishing",
@@ -53,9 +37,7 @@ class SimulationState:
 
     solar_kw: float = 8
     house_kw: float = 2
-    battery_kw: float = -2
     battery_soc_setting: float = 65
-    grid_override_kw: float = 0
     charger_max_amps_setting: float = 16
     charger_session_amps_setting: float = 0
     ev_soc_setting: float = 50
@@ -65,7 +47,6 @@ class SimulationState:
     ev_target_soc: float = 80
     simulation_speed: float = 1
     dynamic_enabled: bool = False
-    grid_override_enabled: bool = False
     charger_connected: bool = True
     charger_enabled: bool = False
     charger_force_finishing: bool = False
@@ -92,18 +73,7 @@ class SimulationState:
         if key not in NUMBER_LIMITS and key not in SWITCH_KEYS:
             msg = f"Unknown simulation input: {key}"
             raise ValueError(msg)
-        updated = replace(self, **{key: value})
-        if key in BALANCING_KEYS:
-            return updated._balanced()
-        return updated
-
-    def _balanced(self) -> SimulationState:
-        """Set battery flow so grid meets its target (override, else zero), within limits."""
-        target_grid = self.grid_override_kw if self.grid_override_enabled else 0
-        low, high, _ = NUMBER_LIMITS["battery_kw"]
-        needed = self.home_load - self.solar_kw - target_grid
-        battery = round(min(high, max(low, needed)), 3)
-        return replace(self, battery_kw=battery)
+        return replace(self, **{key: value})
 
     def advance(self, elapsed_seconds: float) -> SimulationState:
         """Advance real elapsed seconds, scaling time and limiting stored energy."""
@@ -141,13 +111,13 @@ class SimulationState:
 
     @property
     def battery_power(self) -> float:
-        """Return actual battery flow, retaining the manual setting at energy bounds."""
-        if self.dynamic_enabled and (
-            (self.battery_soc_setting <= 0 and self.battery_kw > 0)
-            or (self.battery_soc_setting >= MAX_SOC and self.battery_kw < 0)
+        """Return battery flow (positive discharging) that covers the net load."""
+        needed = self.home_load - self.solar_kw
+        if (self.battery_soc_setting <= 0 and needed > 0) or (
+            self.battery_soc_setting >= MAX_SOC and needed < 0
         ):
             return 0
-        return self.battery_kw
+        return round(max(-BATTERY_MAX_KW, min(BATTERY_MAX_KW, needed)), 3)
 
     @property
     def charging_finished(self) -> bool:
@@ -182,16 +152,9 @@ class SimulationState:
         return round(self.house_kw + self.charger_power, 3)
 
     @property
-    def calculated_grid_power(self) -> float:
-        """Return balanced grid exchange, positive import, negative export."""
-        return round(self.home_load - self.solar_kw - self.battery_power, 3)
-
-    @property
     def grid_power(self) -> float:
-        """Return effective grid reading, leaving manual battery power unchanged."""
-        if self.grid_override_enabled:
-            return self.grid_override_kw
-        return self.calculated_grid_power
+        """Return grid exchange after solar and battery, positive import."""
+        return round(self.home_load - self.solar_kw - self.battery_power, 3)
 
     @property
     def charger_state(self) -> str:

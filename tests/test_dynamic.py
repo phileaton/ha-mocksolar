@@ -26,7 +26,6 @@ class DynamicModelTests(unittest.TestCase):
             dynamic_enabled=True,
             charger_enabled=True,
             charger_session_amps_setting=16,
-            battery_kw=0,
         )
         advanced = state.advance(3600)
         self.assertAlmostEqual(advanced.ev_soc_setting, 54.56)
@@ -44,28 +43,27 @@ class DynamicModelTests(unittest.TestCase):
             dynamic_enabled=True,
             battery_capacity_kwh=10,
             battery_soc_setting=50,
-            battery_kw=2,
+            solar_kw=0,
+            house_kw=2,
         )
         discharge = state.advance(3600)
         self.assertEqual(discharge.battery_soc_setting, 30)
         self.assertEqual((50 - discharge.battery_soc_setting) / 100 * 10, 2)
         empty = state.advance(3600 * 100)
         self.assertEqual(empty.battery_soc_setting, 0)
-        self.assertEqual(empty.battery_kw, 2)
         self.assertEqual(empty.battery_power, 0)
-        self.assertEqual(empty.grid_power, -6)
+        self.assertEqual(empty.grid_power, 2)
         self.assertEqual(empty.advance(3600).battery_soc_setting, 0)
-        charge = replace(state, battery_kw=-2).advance(3600)
+        charge = replace(state, solar_kw=4).advance(3600)
         self.assertEqual(charge.battery_soc_setting, 70)
-        full = replace(state, battery_kw=-2).advance(3600 * 100)
+        full = replace(state, solar_kw=4).advance(3600 * 100)
         self.assertEqual(full.battery_soc_setting, 100)
         self.assertEqual(full.battery_power, 0)
-        self.assertEqual(full.battery_kw, -2)
         self.assertLess(
-            replace(full, battery_kw=2).advance(60).battery_soc_setting, 100
+            replace(full, solar_kw=0).advance(60).battery_soc_setting, 100
         )
         self.assertGreater(
-            replace(empty, battery_kw=-2).advance(60).battery_soc_setting, 0
+            replace(empty, solar_kw=4).advance(60).battery_soc_setting, 0
         )
 
     def test_target_completion_and_resume(self) -> None:
@@ -127,7 +125,7 @@ class DynamicModelTests(unittest.TestCase):
                 state = replace(manual, dynamic_enabled=True, **changes)
                 self.assertEqual(state.advance(3600).ev_soc_setting, 50)
         self.assertEqual(
-            replace(manual, battery_soc_setting=0, battery_kw=2).battery_power, 2
+            replace(manual, battery_soc_setting=0, solar_kw=0).battery_power, 0
         )
 
     def test_invalid_time_and_dynamic_parameters(self) -> None:
@@ -165,7 +163,6 @@ class DynamicIntegrationTests(HomeAssistantTestCase):
             cancel = Mock()
             scheduler.return_value = cancel
             await self.create_simulator()
-            await self.command("number", "set_value", "number.mock_battery_kw", value=0)
             await self.command(
                 "number",
                 "set_value",
@@ -247,9 +244,8 @@ class DynamicIntegrationTests(HomeAssistantTestCase):
             await self.command(
                 "switch", "turn_on", "switch.mock_charger_charge_control"
             )
-            await self.command(
-                "number", "set_value", "number.mock_battery_kw", value=12
-            )
+            await self.command("number", "set_value", "number.mock_solar_kw", value=0)
+            await self.command("number", "set_value", "number.mock_house_kw", value=12)
             await self.command("switch", "turn_on", "switch.mock_dynamic_enabled")
             tick = scheduler.call_args.args[1]
             clock.return_value = 1
@@ -258,12 +254,11 @@ class DynamicIntegrationTests(HomeAssistantTestCase):
             self.assertEqual(self.number_value("sensor.mock_ev_battery_soc"), 80)
             self.assertEqual(self.number_value("sensor.mock_charger_power_w"), 0)
             self.assertEqual(self.number_value("sensor.mock_battery_soc"), 0)
-            self.assertEqual(self.number_value("number.mock_battery_kw"), 12)
             self.assertEqual(self.number_value("sensor.mock_battery_power"), 0)
             self.assertEqual(
                 self.number_value("sensor.mock_battery_power_charge_positive_w"), 0
             )
-            self.assertEqual(self.number_value("sensor.mock_grid_power"), -6)
+            self.assertEqual(self.number_value("sensor.mock_grid_power"), 12)
             self.assertEqual(
                 self.hass.states.get("sensor.mock_charger_state").state, "charger_end"
             )
@@ -278,7 +273,7 @@ class DynamicIntegrationTests(HomeAssistantTestCase):
             clock.return_value = 1000
             tick(datetime.now(UTC))
             await self.hass.async_block_till_done()
-            self.assertEqual(self.number_value("sensor.mock_grid_power"), -4)
+            self.assertEqual(self.number_value("sensor.mock_grid_power"), 0)
             cancel.reset_mock()
             await self.command("switch", "turn_on", "switch.mock_dynamic_enabled")
             coordinator = entry.runtime_data

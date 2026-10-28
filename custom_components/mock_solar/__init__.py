@@ -42,7 +42,7 @@ async def async_update_options(
         await entry.runtime_data.dashboard.async_ensure()
     except HomeAssistantError, OSError, ValueError:
         LOGGER.exception(
-            "Unable to create Mock Energy Lab dashboard; simulator remains available"
+            "Unable to create Energy Lab dashboard; simulator remains available"
         )
 
 

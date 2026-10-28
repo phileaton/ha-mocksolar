@@ -19,9 +19,9 @@ class IntegrationTests(HomeAssistantTestCase):
         entities = entity_registry.async_entries_for_config_entry(
             registry, entry.entry_id
         )
-        self.assertEqual(len(entities), 39)
-        self.assertEqual(len({e.unique_id for e in entities}), 39)
-        self.assertEqual(self.number_value("sensor.mock_grid_power"), -4)
+        self.assertEqual(len(entities), 33)
+        self.assertEqual(len({e.unique_id for e in entities}), 33)
+        self.assertEqual(self.number_value("sensor.mock_grid_power"), 0)
         self.assertEqual(self.number_value("sensor.mock_ev_battery_soc"), 50)
         for entity_id, device_class, unit in (
             ("sensor.mock_solar_power", "power", "kW"),
@@ -80,21 +80,17 @@ class IntegrationTests(HomeAssistantTestCase):
             self.hass.states.get("switch.mock_charger_charge_control").state, "off"
         )
 
-    async def test_override_soc_and_invalid_commands(self) -> None:
-        """Forced readings are explicit and invalid services leave state untouched."""
+    async def test_battery_and_grid_follow_production_and_load(self) -> None:
+        """Battery and grid are derived; invalid services leave state untouched."""
         await self.create_simulator()
-        await self.command(
-            "number", "set_value", "number.mock_grid_override_kw", value=7
-        )
-        await self.command("switch", "turn_on", "switch.mock_grid_override_enabled")
-        self.assertEqual(self.number_value("sensor.mock_grid_power"), 7)
-        self.assertEqual(self.number_value("sensor.mock_calculated_grid_power"), 6)
+        await self.command("number", "set_value", "number.mock_house_kw", value=10)
+        self.assertEqual(self.number_value("sensor.mock_battery_power"), 2)
+        self.assertEqual(self.number_value("sensor.mock_grid_power"), 0)
+        await self.command("number", "set_value", "number.mock_solar_kw", value=20)
+        self.assertEqual(self.number_value("sensor.mock_battery_power"), -10)
+        await self.command("number", "set_value", "number.mock_house_kw", value=0)
         self.assertEqual(self.number_value("sensor.mock_battery_power"), -12)
-        self.assertTrue(
-            self.hass.states.get("sensor.mock_grid_power").attributes[
-                "override_enabled"
-            ]
-        )
+        self.assertEqual(self.number_value("sensor.mock_grid_power"), -8)
         await self.command(
             "number", "set_value", "number.mock_ev_soc_setting", value=100
         )
@@ -127,7 +123,7 @@ class IntegrationTests(HomeAssistantTestCase):
         self.assertEqual(
             {s.entity_id for s in self.hass.states.async_all()}, original_ids
         )
-        self.assertEqual(self.number_value("sensor.mock_grid_power"), -4)
+        self.assertEqual(self.number_value("sensor.mock_grid_power"), 0)
 
     async def test_blueprint_entry_migration(self) -> None:
         """Existing sample entries lose obsolete credentials and load local entities."""
@@ -148,7 +144,7 @@ class IntegrationTests(HomeAssistantTestCase):
         self.assertEqual(entry.state, ConfigEntryState.LOADED)
         self.assertEqual(entry.version, 2)
         self.assertEqual(dict(entry.data), {})
-        self.assertEqual(self.number_value("sensor.mock_grid_power"), -4)
+        self.assertEqual(self.number_value("sensor.mock_grid_power"), 0)
 
     async def test_existing_entity_id_is_not_overwritten(self) -> None:
         """Keep an occupied legacy ID and assign the native entity a suffix."""
@@ -160,19 +156,18 @@ class IntegrationTests(HomeAssistantTestCase):
             "sensor", "mock_solar", f"{entry.entry_id}_grid_power"
         )
         self.assertNotEqual(assigned, "sensor.mock_grid_power")
-        self.assertEqual(self.number_value(assigned), -4)
+        self.assertEqual(self.number_value(assigned), 0)
 
     async def test_compatibility_outputs_follow_commands(self) -> None:
         """Adapters preserve kW telemetry and update watts/signs with each command."""
         await self.create_simulator()
         expected = {
             "solar_power_w": 8000,
-            "home_base_load_w": 2000,
+            "house_load_w": 2000,
             "home_load_w": 2000,
-            "grid_power_w": -4000,
-            "calculated_grid_power_w": -4000,
+            "grid_power_w": 0,
             "charger_power_w": 0,
-            "battery_power_charge_positive_w": 2000,
+            "battery_power_charge_positive_w": 6000,
         }
         for key, value in expected.items():
             with self.subTest(key=key):
@@ -181,7 +176,7 @@ class IntegrationTests(HomeAssistantTestCase):
                 self.assertEqual(state.attributes["unit_of_measurement"], "W")
                 self.assertEqual(state.attributes["device_class"], "power")
                 self.assertEqual(state.attributes["state_class"], "measurement")
-        await self.command("number", "set_value", "number.mock_battery_kw", value=2)
+        await self.command("number", "set_value", "number.mock_solar_kw", value=0)
         self.assertEqual(self.number_value("sensor.mock_battery_power"), 2)
         self.assertEqual(
             self.number_value("sensor.mock_battery_power_charge_positive_w"), -2000
@@ -192,20 +187,10 @@ class IntegrationTests(HomeAssistantTestCase):
         )
         self.assertEqual(self.number_value("sensor.mock_charger_power_w"), 3840)
         self.assertEqual(self.number_value("sensor.mock_home_load_w"), 5840)
-        self.assertEqual(self.number_value("sensor.mock_home_base_load_w"), 2000)
-        self.assertEqual(self.number_value("sensor.mock_grid_power_w"), 0)
-        await self.command("number", "set_value", "number.mock_solar_kw", value=0)
-        self.assertEqual(self.number_value("sensor.mock_grid_power_w"), 0)
-        await self.command(
-            "number", "set_value", "number.mock_grid_override_kw", value=-1
+        self.assertEqual(self.number_value("sensor.mock_house_load_w"), 2000)
+        self.assertEqual(
+            self.number_value("sensor.mock_battery_power_charge_positive_w"), -5840
         )
-        await self.command("switch", "turn_on", "switch.mock_grid_override_enabled")
-        self.assertEqual(self.number_value("sensor.mock_grid_power_w"), -1000)
-        self.assertEqual(self.number_value("sensor.mock_calculated_grid_power_w"), -1000)
-        self.assertTrue(
-            self.hass.states.get("sensor.mock_grid_power_w").attributes[
-                "override_enabled"
-            ]
-        )
+        self.assertEqual(self.number_value("sensor.mock_grid_power_w"), 0)
         await self.command("switch", "turn_off", "switch.mock_charger_charge_control")
         self.assertEqual(self.number_value("sensor.mock_charger_power_w"), 0)

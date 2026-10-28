@@ -24,10 +24,8 @@ if TYPE_CHECKING:
 # Preserve the two public charger number IDs; other controls replace helpers.
 NUMBERS = (
     ("solar_kw", "Solar production", "solar_kw", UnitOfPower.KILO_WATT),
-    ("house_kw", "Base household load", "house_kw", UnitOfPower.KILO_WATT),
-    ("battery_kw", "Battery power setting", "battery_kw", UnitOfPower.KILO_WATT),
+    ("house_kw", "Home load (excl. EV)", "house_kw", UnitOfPower.KILO_WATT),
     ("battery_soc_setting", "Battery SOC setting", "battery_soc_setting", PERCENTAGE),
-    ("grid_override_kw", "Grid override", "grid_override_kw", UnitOfPower.KILO_WATT),
     (
         "charger_maximum_current",
         "Charger maximum current",

@@ -58,7 +58,7 @@ class DashboardTests(HomeAssistantTestCase):
         config = (
             await self.hass.data[LOVELACE_DATA].dashboards[path].async_load(force=False)
         )
-        self.assertEqual(config["title"], "Mock Energy Lab")
+        self.assertEqual(config["title"], "Energy Lab")
         registry = er.async_get(self.hass)
         entities = er.async_entries_for_config_entry(registry, entry.entry_id)
         expected = {entity.entity_id for entity in entities}
@@ -121,7 +121,7 @@ class DashboardTests(HomeAssistantTestCase):
         await self.hass.async_block_till_done()
         await self.command("button", "press", "button.mock_regenerate_dashboard")
         rebuilt = await dashboard.async_load(force=False)
-        self.assertEqual(rebuilt["title"], "Mock Energy Lab")
+        self.assertEqual(rebuilt["title"], "Energy Lab")
         self.assertIn("sensor.lab_grid", references(rebuilt))
         self.assertNotIn("sensor.mock_grid_power", references(rebuilt))
         self.assertEqual(len(dashboard_collection(self.hass).async_items()), 1)
@@ -160,7 +160,7 @@ class DashboardTests(HomeAssistantTestCase):
             entry = await self.create_simulator(create_dashboard=True)
         self.assertNotIn(DASHBOARD_PATH, entry.data)
         self.assertFalse(frontend.async_panel_exists(self.hass, DEFAULT_PATH))
-        self.assertEqual(self.number_value("sensor.mock_grid_power"), -4)
+        self.assertEqual(self.number_value("sensor.mock_grid_power"), 0)
         self.assertEqual(dashboard_collection(self.hass).async_items(), [])
 
     async def test_removal_keeps_editable_dashboard(self) -> None:

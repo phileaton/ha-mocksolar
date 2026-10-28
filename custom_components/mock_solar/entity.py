@@ -10,7 +10,7 @@ from .coordinator import MockSolarCoordinator
 class MockSolarEntity(CoordinatorEntity[MockSolarCoordinator]):
     """Represent one value of the shared simulator."""
 
-    _attr_has_entity_name = True
+    _attr_has_entity_name = False
 
     def __init__(self, coordinator: MockSolarCoordinator, key: str, name: str) -> None:
         """Initialize stable per-entry identity and suggested legacy object ID."""
