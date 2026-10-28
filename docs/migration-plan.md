@@ -7,12 +7,14 @@ comes from the supplied handoff and the subsequently supplied original YAML. Ups
 ## Implementation progress
 
 The manual model and native wiring milestones are now implemented: a validated,
-immutable local model, credential-free single-instance setup, 24 native entities,
+immutable local model, credential-free single-instance setup, 31 native entities,
 immediate command updates, blueprint entry migration, and lifecycle tests.
 The optional native dashboard is `examples/mock_energy_dashboard.yaml`. SOC is
-manual and inputs reset on reload/restart. W/sign compatibility outputs and
-end-to-end EV Smart Charger checks remain the next milestone, followed by
-elapsed-time simulation. See the README for current installation and controls.
+manual and inputs reset on reload/restart. W/sign compatibility outputs are
+implemented and the actual upstream readers/controller have passed an optional
+contract test. Full scheduling and solar-surplus arbitration still require live
+validation; see [the mapping and test guide](ev-smart-charger.md). Elapsed-time
+simulation is the next implementation milestone. See the README for current installation and controls.
 
 The inventory below records the original blueprint assessment. Sample API,
 polling, credentials and example entities have since been replaced; simulation,
@@ -38,9 +40,8 @@ The original prototype package is now archived unchanged at
 `examples/legacy/mock_energy.yaml`; see [the prototype review](prototype-review.md)
 for its complete entity inventory and inconsistencies. The original dashboard is
 archived at `examples/legacy/mock_energy_dashboard.yaml`; all 18 distinct entity
-references match the package's expected IDs. The simulation engine, native number
-platform, strings.json and test suite remain absent.
-None of the intended energy entities is implemented by the native integration.
+references match the package's expected IDs. At the time of the original assessment, the simulation engine, native number
+platform, strings.json and test suite were absent. These are now implemented.
 Actual example entity IDs depend on the Home Assistant entity registry and cannot
 be established from this checkout.
 
@@ -167,5 +168,7 @@ or the prototype battery sign.
    optional dashboard and installation on a clean Home Assistant instance.
 
 Milestones 1–3 are complete for the manual simulator, including recovery of both
-legacy files. Continue with compatibility outputs and end-to-end verification
-(step 4), then the dynamic model. The legacy artifacts remain unchanged.
+legacy files. Step 4 now includes W/sign adapters, verified upstream reader and
+controller contracts, and documented entity mappings. Live scheduling/arbitration
+verification remains open. Continue with the dynamic model while preserving that
+validation boundary. The legacy artifacts remain unchanged.

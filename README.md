@@ -2,7 +2,7 @@
 
 Mock Solar is a local Home Assistant energy simulator for testing automations
 without physical hardware. This project is a work in prograss and is being mostly vibe coded. The first implementation provides a manual solar,
-household load, home battery, grid and EV charger model through **24 native
+household load, home battery, grid and EV charger model through **31 native
 entities**. It does not connect to real devices or external APIs.
 
 ## Install and configure
@@ -42,7 +42,8 @@ below 6 A. EV power is calculated at 240 V single phase.
 
 ## Telemetry and conventions
 
-All power sensors use kW; both SOC sensors use percent with battery device class.
+The original power sensors use kW; compatibility outputs use W. Both SOC
+sensors use percent with battery device class.
 
 - `sensor.mock_solar_power`, `sensor.mock_home_base_load`, `sensor.mock_home_load`
 - `sensor.mock_battery_power`, `sensor.mock_battery_soc`
@@ -93,19 +94,20 @@ entities may remain as unavailable registry entries and can be removed manually.
 
 ## EV Smart Charger
 
-Normalized status, charger switch and current controls are implemented, but the
-pairing has not been tested end to end. Its inspected source expects watts for
-solar/home/grid inputs and the opposite battery-power sign. Do not directly map
-these kW outputs to those watt inputs. Explicit compatibility outputs and tested
-mappings are the next milestone. Its 230 V / 32 A control model also differs from
-this simulator's 240 V / 40 A range. See [the migration plan](docs/migration-plan.md).
+Seven compatibility sensors now expose W readings, including an explicitly named
+charge-positive battery adapter. The original kW sensors retain their conventions.
+See the [mapping and testing guide](docs/ev-smart-charger.md) for exact entity
+selections, current/voltage limits and a live validation checklist.
+
+The real upstream readers and charger controller were tested against Mock Solar
+entities. Full scheduling and solar-surplus arbitration remain unverified.
 
 ## Validation
 
 With the development dependencies installed and Python 3.14:
 
 ```sh
-python3 -m unittest discover -s tests -v
+python3 -m unittest discover -s tests -t . -v
 ruff check .
 ruff format . --check
 ```
@@ -113,4 +115,7 @@ ruff format . --check
 Tests run the model and real Home Assistant 2026.6.4 platforms using temporary
 configuration directories. They cover power balance, status priority, bounds,
 external service commands, metadata, ID collisions, sample-entry migration and
-unload/reload, with HTTP requests blocked during integration operations.
+unload/reload and watt/sign adapters, with HTTP requests blocked during integration
+operations. An optional [upstream contract test](docs/ev-smart-charger.md#repeat-the-contract-test)
+runs against an external EV Smart Charger source checkout; it is skipped unless
+`MOCK_SOLAR_EVSC_PATH` is set.

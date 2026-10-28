@@ -94,13 +94,50 @@ SENSORS = (
 )
 
 
+# Explicit adapters retain the original kW outputs and discharge-positive sign.
+# Entity key, display name, model attribute, kW-to-W conversion factor.
+COMPATIBILITY_SENSORS = (
+    ("solar_power_w", "Solar power W", "solar_kw", 1000),
+    ("home_base_load_w", "Base home load W", "house_kw", 1000),
+    ("home_load_w", "Home load W", "home_load", 1000),
+    ("grid_power_w", "Grid power W", "grid_power", 1000),
+    (
+        "calculated_grid_power_w",
+        "Calculated grid power W",
+        "calculated_grid_power",
+        1000,
+    ),
+    ("charger_power_w", "Charger power W", "charger_power", 1000),
+    (
+        "battery_power_charge_positive_w",
+        "Battery power W (positive charging)",
+        "battery_kw",
+        -1000,
+    ),
+)
+
+
 async def async_setup_entry(
     hass: HomeAssistant,  # noqa: ARG001 HA platform interface
     entry: MockSolarConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Expose a consistent snapshot through standard sensors."""
-    async_add_entities(MockSolarSensor(entry.runtime_data, *item) for item in SENSORS)
+    async_add_entities(
+        [MockSolarSensor(entry.runtime_data, *item) for item in SENSORS]
+        + [
+            MockSolarSensor(
+                entry.runtime_data,
+                key,
+                name,
+                attribute,
+                SensorDeviceClass.POWER,
+                UnitOfPower.WATT,
+                scale=scale,
+            )
+            for key, name, attribute, scale in COMPATIBILITY_SENSORS
+        ]
+    )
 
 
 class MockSolarSensor(MockSolarEntity, SensorEntity):
@@ -114,11 +151,14 @@ class MockSolarSensor(MockSolarEntity, SensorEntity):
         attribute: str,
         device_class: SensorDeviceClass | None,
         unit: str | None,
+        *,
+        scale: float = 1,
     ) -> None:
         """Describe the model attribute and its metadata."""
         super().__init__(coordinator, key, name)
         self.entity_id = f"sensor.mock_{key}"
         self._attribute = attribute
+        self._scale = scale
         self._attr_device_class = device_class
         self._attr_native_unit_of_measurement = unit
         if unit is not None:
@@ -135,14 +175,19 @@ class MockSolarSensor(MockSolarEntity, SensorEntity):
     @property
     def native_value(self) -> float | str:
         """Return the current model output."""
-        return getattr(self.coordinator.data, self._attribute)
+        value = getattr(self.coordinator.data, self._attribute)
+        if isinstance(value, str):
+            return value
+        return round(value * self._scale, 3)
 
     @property
-    def extra_state_attributes(self) -> dict[str, bool | float] | None:
+    def extra_state_attributes(self) -> dict[str, bool | float | str] | None:
         """Make forced grid readings identifiable alongside the calculated value."""
-        if self._key == "grid_power":
+        if self._key in {"grid_power", "grid_power_w"}:
             return {
                 "override_enabled": self.coordinator.data.grid_override_enabled,
                 "calculated_power_kw": self.coordinator.data.calculated_grid_power,
             }
+        if self._key == "battery_power_charge_positive_w":
+            return {"positive_direction": "charging"}
         return None

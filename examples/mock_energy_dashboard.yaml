@@ -40,6 +40,16 @@ views:
         entities:
           - number.mock_ev_soc_setting
           - sensor.mock_ev_battery_soc
+      - type: entities
+        title: Compatibility Telemetry (W)
+        entities:
+          - sensor.mock_solar_power_w
+          - sensor.mock_home_base_load_w
+          - sensor.mock_home_load_w
+          - sensor.mock_grid_power_w
+          - sensor.mock_calculated_grid_power_w
+          - sensor.mock_battery_power_charge_positive_w
+          - sensor.mock_charger_power_w
       - type: history-graph
         title: Simulated Power (kW)
         hours_to_show: 2

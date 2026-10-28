@@ -27,4 +27,4 @@ jobs:
       - name: Install development requirements
         run: python3 -m pip install -r requirements_dev.txt
       - name: Run tests
-        run: python3 -m unittest discover -s tests -v
+        run: python3 -m unittest discover -s tests -t . -v

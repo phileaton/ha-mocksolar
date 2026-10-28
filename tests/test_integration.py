@@ -1,73 +1,16 @@
 """Exercise actual Home Assistant setup, services, registry and unload."""
 
-import unittest
-from tempfile import TemporaryDirectory
 from types import MappingProxyType
-from unittest.mock import patch
 
-from homeassistant import loader
-from homeassistant.bootstrap import async_load_base_functionality
-from homeassistant.config_entries import ConfigEntries, ConfigEntry, ConfigEntryState
-from homeassistant.core import HomeAssistant
+from homeassistant.config_entries import ConfigEntry, ConfigEntryState
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import entity_registry
-from homeassistant.setup import async_setup_component
+
+from .helpers import HomeAssistantTestCase
 
 
-class IntegrationTests(unittest.IsolatedAsyncioTestCase):
-    """Run the real platforms with a fresh temporary HA configuration."""
-
-    async def asyncSetUp(self) -> None:
-        """Initialize Home Assistant's registries and service infrastructure."""
-        self.directory = TemporaryDirectory()
-        self.hass = HomeAssistant(self.directory.name)
-        self.hass.config.skip_pip = True
-        loader.async_setup(self.hass)
-        self.hass.config_entries = ConfigEntries(self.hass, {})
-        self.assertTrue(await async_load_base_functionality(self.hass))
-        self.assertTrue(await async_setup_component(self.hass, "homeassistant", {}))
-        self.no_network = patch(
-            "aiohttp.ClientSession._request",
-            side_effect=AssertionError("Unexpected network request"),
-        )
-        self.no_network.start()
-
-    async def asyncTearDown(self) -> None:
-        """Stop HA and remove all temporary registry/configuration files."""
-        await self.hass.async_stop()
-        self.no_network.stop()
-        self.directory.cleanup()
-
-    async def create_simulator(self) -> ConfigEntry:
-        """Create and load the integration through its actual user flow."""
-        form = await self.hass.config_entries.flow.async_init(
-            "mock_solar", context={"source": "user"}
-        )
-        self.assertEqual(form["type"], "form")
-        result = await self.hass.config_entries.flow.async_configure(
-            form["flow_id"], {}
-        )
-        self.assertEqual(result["type"], "create_entry")
-        self.assertEqual(result["data"], {})
-        await self.hass.async_block_till_done()
-        entry = result["result"]
-        self.assertEqual(entry.state, ConfigEntryState.LOADED)
-        return entry
-
-    def number_value(self, entity_id: str) -> float:
-        """Read a numeric state while failing on missing or unavailable outputs."""
-        state = self.hass.states.get(entity_id)
-        self.assertIsNotNone(state, entity_id)
-        return float(state.state)
-
-    async def command(
-        self, domain: str, service: str, entity_id: str, **data: float
-    ) -> None:
-        """Send the same services external integrations and dashboards use."""
-        await self.hass.services.async_call(
-            domain, service, {"entity_id": entity_id, **data}, blocking=True
-        )
-        await self.hass.async_block_till_done()
+class IntegrationTests(HomeAssistantTestCase):
+    """Verify the local integration against actual HA services and registries."""
 
     async def test_setup_metadata_and_single_instance(self) -> None:
         """Default entity IDs, classes and unique identities survive real setup."""
@@ -76,8 +19,8 @@ class IntegrationTests(unittest.IsolatedAsyncioTestCase):
         entities = entity_registry.async_entries_for_config_entry(
             registry, entry.entry_id
         )
-        self.assertEqual(len(entities), 24)
-        self.assertEqual(len({e.unique_id for e in entities}), 24)
+        self.assertEqual(len(entities), 31)
+        self.assertEqual(len({e.unique_id for e in entities}), 31)
         self.assertEqual(self.number_value("sensor.mock_grid_power"), -4)
         self.assertEqual(self.number_value("sensor.mock_ev_battery_soc"), 50)
         for entity_id, device_class, unit in (
@@ -216,3 +159,51 @@ class IntegrationTests(unittest.IsolatedAsyncioTestCase):
         )
         self.assertNotEqual(assigned, "sensor.mock_grid_power")
         self.assertEqual(self.number_value(assigned), -4)
+
+    async def test_compatibility_outputs_follow_commands(self) -> None:
+        """Adapters preserve kW telemetry and update watts/signs with each command."""
+        await self.create_simulator()
+        expected = {
+            "solar_power_w": 8000,
+            "home_base_load_w": 2000,
+            "home_load_w": 2000,
+            "grid_power_w": -4000,
+            "calculated_grid_power_w": -4000,
+            "charger_power_w": 0,
+            "battery_power_charge_positive_w": 2000,
+        }
+        for key, value in expected.items():
+            with self.subTest(key=key):
+                state = self.hass.states.get(f"sensor.mock_{key}")
+                self.assertEqual(float(state.state), value)
+                self.assertEqual(state.attributes["unit_of_measurement"], "W")
+                self.assertEqual(state.attributes["device_class"], "power")
+                self.assertEqual(state.attributes["state_class"], "measurement")
+        await self.command("number", "set_value", "number.mock_battery_kw", value=2)
+        self.assertEqual(self.number_value("sensor.mock_battery_power"), 2)
+        self.assertEqual(
+            self.number_value("sensor.mock_battery_power_charge_positive_w"), -2000
+        )
+        await self.command("switch", "turn_on", "switch.mock_charger_charge_control")
+        await self.command(
+            "number", "set_value", "number.mock_charger_session_current_limit", value=16
+        )
+        self.assertEqual(self.number_value("sensor.mock_charger_power_w"), 3840)
+        self.assertEqual(self.number_value("sensor.mock_home_load_w"), 5840)
+        self.assertEqual(self.number_value("sensor.mock_home_base_load_w"), 2000)
+        self.assertEqual(self.number_value("sensor.mock_grid_power_w"), -4160)
+        await self.command("number", "set_value", "number.mock_solar_kw", value=0)
+        self.assertEqual(self.number_value("sensor.mock_grid_power_w"), 3840)
+        await self.command(
+            "number", "set_value", "number.mock_grid_override_kw", value=-1
+        )
+        await self.command("switch", "turn_on", "switch.mock_grid_override_enabled")
+        self.assertEqual(self.number_value("sensor.mock_grid_power_w"), -1000)
+        self.assertEqual(self.number_value("sensor.mock_calculated_grid_power_w"), 3840)
+        self.assertTrue(
+            self.hass.states.get("sensor.mock_grid_power_w").attributes[
+                "override_enabled"
+            ]
+        )
+        await self.command("switch", "turn_off", "switch.mock_charger_charge_control")
+        self.assertEqual(self.number_value("sensor.mock_charger_power_w"), 0)
