@@ -233,9 +233,6 @@ class DynamicIntegrationTests(HomeAssistantTestCase):
                 "number", "set_value", "number.mock_battery_soc_setting", value=1
             )
             await self.command(
-                "number", "set_value", "number.mock_battery_kw", value=12
-            )
-            await self.command(
                 "number", "set_value", "number.mock_ev_soc_setting", value=79
             )
             await self.command(
@@ -249,6 +246,9 @@ class DynamicIntegrationTests(HomeAssistantTestCase):
             )
             await self.command(
                 "switch", "turn_on", "switch.mock_charger_charge_control"
+            )
+            await self.command(
+                "number", "set_value", "number.mock_battery_kw", value=12
             )
             await self.command("switch", "turn_on", "switch.mock_dynamic_enabled")
             tick = scheduler.call_args.args[1]

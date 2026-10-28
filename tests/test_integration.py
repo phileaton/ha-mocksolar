@@ -47,7 +47,8 @@ class IntegrationTests(HomeAssistantTestCase):
         )
         self.assertEqual(self.number_value("sensor.mock_charger_power"), 2.4)
         self.assertEqual(self.number_value("sensor.mock_home_load"), 4.4)
-        self.assertEqual(self.number_value("sensor.mock_grid_power"), -1.6)
+        self.assertEqual(self.number_value("sensor.mock_grid_power"), 0)
+        self.assertEqual(self.number_value("sensor.mock_battery_power"), -3.6)
         self.assertEqual(
             self.hass.states.get("sensor.mock_charger_state").state, "charger_charging"
         )
@@ -87,8 +88,8 @@ class IntegrationTests(HomeAssistantTestCase):
         )
         await self.command("switch", "turn_on", "switch.mock_grid_override_enabled")
         self.assertEqual(self.number_value("sensor.mock_grid_power"), 7)
-        self.assertEqual(self.number_value("sensor.mock_calculated_grid_power"), -4)
-        self.assertEqual(self.number_value("sensor.mock_battery_power"), -2)
+        self.assertEqual(self.number_value("sensor.mock_calculated_grid_power"), 6)
+        self.assertEqual(self.number_value("sensor.mock_battery_power"), -12)
         self.assertTrue(
             self.hass.states.get("sensor.mock_grid_power").attributes[
                 "override_enabled"
@@ -112,7 +113,8 @@ class IntegrationTests(HomeAssistantTestCase):
         coordinator = entry.runtime_data
         await self.command("homeassistant", "update_entity", "sensor.mock_grid_power")
         await self.command("number", "set_value", "number.mock_solar_kw", value=0)
-        self.assertEqual(self.number_value("sensor.mock_grid_power"), 4)
+        self.assertEqual(self.number_value("sensor.mock_grid_power"), 0)
+        self.assertEqual(self.number_value("sensor.mock_battery_power"), 2)
         self.assertTrue(coordinator._listeners)  # noqa: SLF001 Verify subscription cleanup
         self.assertTrue(await self.hass.config_entries.async_unload(entry.entry_id))
         await self.hass.async_block_till_done()
@@ -191,15 +193,15 @@ class IntegrationTests(HomeAssistantTestCase):
         self.assertEqual(self.number_value("sensor.mock_charger_power_w"), 3840)
         self.assertEqual(self.number_value("sensor.mock_home_load_w"), 5840)
         self.assertEqual(self.number_value("sensor.mock_home_base_load_w"), 2000)
-        self.assertEqual(self.number_value("sensor.mock_grid_power_w"), -4160)
+        self.assertEqual(self.number_value("sensor.mock_grid_power_w"), 0)
         await self.command("number", "set_value", "number.mock_solar_kw", value=0)
-        self.assertEqual(self.number_value("sensor.mock_grid_power_w"), 3840)
+        self.assertEqual(self.number_value("sensor.mock_grid_power_w"), 0)
         await self.command(
             "number", "set_value", "number.mock_grid_override_kw", value=-1
         )
         await self.command("switch", "turn_on", "switch.mock_grid_override_enabled")
         self.assertEqual(self.number_value("sensor.mock_grid_power_w"), -1000)
-        self.assertEqual(self.number_value("sensor.mock_calculated_grid_power_w"), 3840)
+        self.assertEqual(self.number_value("sensor.mock_calculated_grid_power_w"), -1000)
         self.assertTrue(
             self.hass.states.get("sensor.mock_grid_power_w").attributes[
                 "override_enabled"

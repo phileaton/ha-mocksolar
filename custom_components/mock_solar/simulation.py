@@ -24,6 +24,20 @@ NUMBER_LIMITS = {
     "ev_target_soc": (0, 100, 1),
     "simulation_speed": (1, 3600, 1),
 }
+# Inputs whose change rebalances battery (and hence grid) power.
+BALANCING_KEYS = frozenset(
+    {
+        "solar_kw",
+        "house_kw",
+        "grid_override_kw",
+        "grid_override_enabled",
+        "charger_max_amps_setting",
+        "charger_session_amps_setting",
+        "charger_connected",
+        "charger_enabled",
+        "charger_force_finishing",
+    }
+)
 SWITCH_KEYS = (
     "dynamic_enabled",
     "grid_override_enabled",
@@ -78,7 +92,18 @@ class SimulationState:
         if key not in NUMBER_LIMITS and key not in SWITCH_KEYS:
             msg = f"Unknown simulation input: {key}"
             raise ValueError(msg)
-        return replace(self, **{key: value})
+        updated = replace(self, **{key: value})
+        if key in BALANCING_KEYS:
+            return updated._balanced()
+        return updated
+
+    def _balanced(self) -> SimulationState:
+        """Set battery flow so grid meets its target (override, else zero), within limits."""
+        target_grid = self.grid_override_kw if self.grid_override_enabled else 0
+        low, high, _ = NUMBER_LIMITS["battery_kw"]
+        needed = self.home_load - self.solar_kw - target_grid
+        battery = round(min(high, max(low, needed)), 3)
+        return replace(self, battery_kw=battery)
 
     def advance(self, elapsed_seconds: float) -> SimulationState:
         """Advance real elapsed seconds, scaling time and limiting stored energy."""

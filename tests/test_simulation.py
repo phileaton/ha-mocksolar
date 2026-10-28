@@ -114,6 +114,7 @@ class SimulationTests(unittest.TestCase):
         state = SimulationState()
         updated = state.with_input("solar_kw", value=10)
         self.assertEqual(state.solar_kw, 8)
-        self.assertEqual(updated.grid_power, -6)
+        self.assertEqual(updated.grid_power, 0)
+        self.assertEqual(updated.battery_kw, -8)
         with self.assertRaises(FrozenInstanceError):
             state.solar_kw = 0
