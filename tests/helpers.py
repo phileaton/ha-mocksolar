@@ -35,14 +35,14 @@ class HomeAssistantTestCase(unittest.IsolatedAsyncioTestCase):
         self.no_network.stop()
         self.directory.cleanup()
 
-    async def create_simulator(self) -> ConfigEntry:
+    async def create_simulator(self, *, create_dashboard: bool = False) -> ConfigEntry:
         """Create and load the integration through its actual user flow."""
         form = await self.hass.config_entries.flow.async_init(
             "mock_solar", context={"source": "user"}
         )
         self.assertEqual(form["type"], "form")
         result = await self.hass.config_entries.flow.async_configure(
-            form["flow_id"], {}
+            form["flow_id"], {"create_dashboard": create_dashboard}
         )
         self.assertEqual(result["type"], "create_entry")
         self.assertEqual(result["data"], {})

@@ -1,0 +1,113 @@
+{
+  "title": "Mock Energy Lab",
+  "views": [
+    {
+      "title": "Simulator",
+      "path": "simulator",
+      "icon": "mdi:solar-power",
+      "cards": [
+        {
+          "type": "entities",
+          "title": "Simulation Mode",
+          "entities": [
+            "switch.mock_dynamic_enabled",
+            "number.mock_simulation_speed",
+            "button.mock_reset_simulator"
+          ]
+        },
+        {
+          "type": "entities",
+          "title": "Simulation Inputs",
+          "entities": [
+            "number.mock_solar_kw",
+            "number.mock_house_kw",
+            "number.mock_battery_kw",
+            "number.mock_battery_soc_setting",
+            "number.mock_battery_capacity_kwh",
+            "switch.mock_grid_override_enabled",
+            "number.mock_grid_override_kw"
+          ]
+        },
+        {
+          "type": "entities",
+          "title": "Mock Wallbox",
+          "entities": [
+            "switch.mock_charger_connected",
+            "switch.mock_charger_charge_control",
+            "number.mock_charger_maximum_current",
+            "number.mock_charger_session_current_limit",
+            "switch.mock_charger_force_finishing",
+            "sensor.mock_charger_status_connector",
+            "sensor.mock_charger_state",
+            "binary_sensor.mock_ev_connected"
+          ]
+        },
+        {
+          "type": "entities",
+          "title": "Simulated Telemetry",
+          "entities": [
+            "sensor.mock_solar_power",
+            "sensor.mock_home_base_load",
+            "sensor.mock_home_load",
+            "sensor.mock_grid_power",
+            "sensor.mock_calculated_grid_power",
+            "sensor.mock_battery_power",
+            "sensor.mock_battery_soc",
+            "sensor.mock_charger_power"
+          ]
+        },
+        {
+          "type": "entities",
+          "title": "Electric Vehicle",
+          "entities": [
+            "number.mock_ev_soc_setting",
+            "number.mock_ev_capacity_kwh",
+            "number.mock_ev_charging_efficiency",
+            "number.mock_ev_target_soc",
+            "sensor.mock_ev_battery_soc"
+          ]
+        },
+        {
+          "type": "entities",
+          "title": "Compatibility Telemetry (W)",
+          "entities": [
+            "sensor.mock_solar_power_w",
+            "sensor.mock_home_base_load_w",
+            "sensor.mock_home_load_w",
+            "sensor.mock_grid_power_w",
+            "sensor.mock_calculated_grid_power_w",
+            "sensor.mock_battery_power_charge_positive_w",
+            "sensor.mock_charger_power_w"
+          ]
+        },
+        {
+          "type": "history-graph",
+          "title": "Simulated Power (kW)",
+          "hours_to_show": 2,
+          "entities": [
+            "sensor.mock_solar_power",
+            "sensor.mock_home_load",
+            "sensor.mock_grid_power",
+            "sensor.mock_battery_power",
+            "sensor.mock_charger_power"
+          ]
+        },
+        {
+          "type": "button",
+          "name": "Regenerate dashboard",
+          "icon": "mdi:view-dashboard-edit",
+          "tap_action": {
+            "action": "perform-action",
+            "perform_action": "button.press",
+            "target": {
+              "entity_id": "button.mock_regenerate_dashboard"
+            },
+            "confirmation": {
+              "text": "Replace this dashboard with the default Mock Energy Lab layout? Your dashboard edits will be replaced."
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

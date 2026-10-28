@@ -14,6 +14,7 @@ from .simulation import SimulationState
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    from .dashboard import MockSolarDashboard
     from .data import MockSolarConfigEntry
 
 TICK_INTERVAL = timedelta(seconds=1)
@@ -21,6 +22,8 @@ TICK_INTERVAL = timedelta(seconds=1)
 
 class MockSolarCoordinator(DataUpdateCoordinator[SimulationState]):
     """Advance monotonic elapsed time, settling old inputs before each command."""
+
+    dashboard: MockSolarDashboard
 
     def __init__(self, hass: HomeAssistant, entry: MockSolarConfigEntry) -> None:
         """Initialize repeatable defaults with dynamic mode disabled."""

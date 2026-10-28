@@ -7,9 +7,14 @@ comes from the supplied handoff and the subsequently supplied original YAML. Ups
 ## Implementation progress
 
 The manual model and native wiring milestones are now implemented: a validated,
-immutable local model, credential-free single-instance setup, 38 native entities,
+immutable local model, credential-free single-instance setup, 39 native entities,
 immediate command updates, blueprint entry migration, and lifecycle tests.
-The optional native dashboard is `examples/mock_energy_dashboard.yaml`. Manual
+Optional dashboard creation is available in setup and integration options. The
+bundled layout resolves registered entity IDs and creates an editable Lovelace
+dashboard; reloads preserve edits, and a separate regenerate button explicitly
+replaces the layout. Dashboard preferences and ownership persist independently
+of volatile simulation state. `examples/mock_energy_dashboard.yaml` remains a
+manual installation alternative. Manual
 mode remains the default; optional dynamic SOC, capacities, EV charging efficiency,
 target SOC, accelerated time and a reset button are now implemented. Inputs reset
 on reload/restart, without offline catch-up. W/sign compatibility outputs are

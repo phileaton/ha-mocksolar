@@ -2,7 +2,7 @@
 
 Mock Solar is a local Home Assistant energy simulator for testing automations
 without physical hardware. This project is a work in prograss and is being mostly vibe coded. The integration models solar production, household load, home battery storage,
-grid exchange and EV charging in manual or dynamic mode through **38 native
+grid exchange and EV charging in manual or dynamic mode through **39 native
 entities**. It does not connect to real devices or external APIs.
 
 ## Install and configure
@@ -10,10 +10,36 @@ entities**. It does not connect to real devices or external APIs.
 1. Copy `custom_components/mock_solar` into your Home Assistant configuration's
    `custom_components` directory, then restart Home Assistant.
 2. Open **Settings → Devices & services → Add integration → Mock Solar** and
-   confirm creation. No credentials are required. One simulator is supported.
-3. Open the Mock Solar device to adjust the numbers and switches, or use the
-   [optional dashboard](examples/mock_energy_dashboard.yaml). Paste that YAML
-   into a dashboard's raw configuration editor, outside `/config/packages/`.
+   leave **Create Mock Energy Lab dashboard** checked and confirm creation.
+   No credentials are required. One simulator is supported.
+3. Open **Mock Energy Lab** in the sidebar, or use the Mock Solar device's controls.
+
+For an existing installation, open **Settings → Devices & services → Mock Solar →
+Configure** and enable **Create Mock Energy Lab dashboard**. Changing this option
+creates the dashboard without resetting the running simulation. Existing entries
+start with dashboard creation disabled until you opt in.
+
+The generated dashboard is a standard editable Home Assistant dashboard. Its
+layout is bundled with the integration and its entity references use your actual
+registry IDs, including suffixes. No separate YAML installation is required.
+Reloads, restarts and upgrades preserve dashboard edits. After renaming an
+entity, update its dashboard reference yourself or regenerate the default layout.
+
+Use **Regenerate dashboard** on the dashboard (with a confirmation prompt), or
+`button.mock_regenerate_dashboard` on the device, to explicitly replace the
+layout with the bundled default and current entity IDs. This replaces your
+layout edits; the device button and service call do not show a confirmation.
+It does not reset simulator values. Dashboard creation must be enabled first.
+
+Disabling dashboard creation or removing the integration leaves an existing
+dashboard intact. To remove it, use Home Assistant's dashboard settings. Disable
+creation first if you want it to stay deleted after a reload. Existing dashboards
+at the default URL are preserved; Mock Solar chooses a different URL when needed.
+
+The [manual dashboard YAML](examples/mock_energy_dashboard.yaml) remains an
+alternative. Paste it into a dashboard's raw configuration editor, outside
+`/config/packages/`, and adjust IDs if needed. It is independent of the generated
+dashboard and is never changed by regeneration.
 
 For development in the supplied environment, install `requirements_dev.txt` and
 run `bash scripts/develop`. HACS publishing and clean-install release validation
@@ -158,7 +184,8 @@ Tests run the model and real Home Assistant 2026.6.4 platforms using temporary
 configuration directories. They cover power balance, status priority, bounds,
 external service commands, metadata, ID collisions, sample-entry migration and
 unload/reload, watt/sign adapters, dynamic energy limits, accelerated time,
-reset and a real Home Assistant timer callback, with HTTP requests blocked during integration
+reset, a real Home Assistant timer callback, and real Lovelace dashboard
+creation/preservation/regeneration, with HTTP requests blocked during integration
 operations. An optional [upstream contract test](docs/ev-smart-charger.md#repeat-the-contract-test)
 runs against an external EV Smart Charger source checkout; it is skipped unless
 `MOCK_SOLAR_EVSC_PATH` is set.
