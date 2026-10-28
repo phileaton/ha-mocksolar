@@ -1,0 +1,171 @@
+# Home Assistant package: /config/packages/mock_energy.yaml
+# All powers are kW. Battery + = discharge, - = charge; grid + = import.
+input_number:
+  mock_solar_kw:
+    name: Mock solar production
+    min: 0
+    max: 20
+    step: 0.1
+    initial: 8
+    unit_of_measurement: kW
+    mode: slider
+  mock_house_kw:
+    name: Mock household load (excluding EV)
+    min: 0
+    max: 20
+    step: 0.1
+    initial: 2
+    unit_of_measurement: kW
+    mode: slider
+  mock_battery_kw:
+    name: Mock battery power (+ discharge)
+    min: -12
+    max: 12
+    step: 0.1
+    initial: -2
+    unit_of_measurement: kW
+    mode: slider
+  mock_battery_soc_setting:
+    name: Mock battery SOC
+    min: 0
+    max: 100
+    step: 1
+    initial: 65
+    unit_of_measurement: '%'
+    mode: slider
+  mock_grid_override_kw:
+    name: Mock grid override (+ import)
+    min: -20
+    max: 20
+    step: 0.1
+    initial: 0
+    unit_of_measurement: kW
+    mode: slider
+  mock_charger_max_amps_setting:
+    name: Mock charger max current setting
+    min: 6
+    max: 40
+    step: 1
+    initial: 16
+    unit_of_measurement: A
+    mode: slider
+  mock_charger_session_amps_setting:
+    name: Mock charger session current setting
+    min: 0
+    max: 40
+    step: 1
+    initial: 0
+    unit_of_measurement: A
+    mode: slider
+input_boolean:
+  mock_grid_override_enabled:
+    name: Mock grid override enabled
+    initial: false
+  mock_charger_connected:
+    name: Mock EV connected
+    initial: true
+  mock_charger_enabled:
+    name: Mock charger charge control
+    initial: false
+  mock_charger_force_finishing:
+    name: Mock charger force Finishing
+    initial: false
+
+template:
+  - sensor:
+      - name: Mock Solar Power
+        unique_id: mock_solar_power
+        unit_of_measurement: kW
+        device_class: power
+        state_class: measurement
+        state: "{{ states('input_number.mock_solar_kw') | float(0) }}"
+      - name: Mock Battery SOC
+        unique_id: mock_battery_soc
+        unit_of_measurement: '%'
+        device_class: battery
+        state_class: measurement
+        state: "{{ states('input_number.mock_battery_soc_setting') | float(0) }}"
+      - name: Mock Battery Power
+        unique_id: mock_battery_power
+        unit_of_measurement: kW
+        device_class: power
+        state_class: measurement
+        state: >-
+          {% if is_state('input_boolean.mock_grid_override_enabled','on') %}
+            {{ (states('input_number.mock_grid_override_kw')|float(0) + states('input_number.mock_solar_kw')|float(0) - states('input_number.mock_house_kw')|float(0) - states('sensor.mock_charger_power')|float(0))|round(3) }}
+          {% else %}
+            {{ states('input_number.mock_battery_kw')|float(0) }}
+          {% endif %}
+      - name: Mock Charger Power
+        unique_id: mock_charger_power
+        unit_of_measurement: kW
+        device_class: power
+        state_class: measurement
+        state: >-
+          {% if is_state('input_boolean.mock_charger_enabled','on') and is_state('input_boolean.mock_charger_connected','on') and is_state('input_boolean.mock_charger_force_finishing','off') %}
+            {{ (240 * ([states('input_number.mock_charger_max_amps_setting')|float(0), states('input_number.mock_charger_session_amps_setting')|float(0)]|min) / 1000)|round(3) }}
+          {% else %} 0 {% endif %}
+      - name: Mock Home Load
+        unique_id: mock_home_load
+        unit_of_measurement: kW
+        device_class: power
+        state_class: measurement
+        state: "{{ (states('input_number.mock_house_kw')|float(0) + states('sensor.mock_charger_power')|float(0))|round(3) }}"
+      - name: Mock Grid Power
+        unique_id: mock_grid_power
+        unit_of_measurement: kW
+        device_class: power
+        state_class: measurement
+        state: >-
+          {% if is_state('input_boolean.mock_grid_override_enabled','on') %}
+            {{ states('input_number.mock_grid_override_kw')|float(0) }}
+          {% else %}
+            {{ (states('sensor.mock_home_load')|float(0) - states('sensor.mock_solar_power')|float(0) + states('sensor.mock_battery_power')|float(0))|round(3) }}
+          {% endif %}
+      - name: Mock Charger Status Connector
+        unique_id: mock_charger_status_connector
+        state: >-
+          {% if is_state('input_boolean.mock_charger_force_finishing','on') %} Finishing
+          {% elif is_state('input_boolean.mock_charger_connected','off') %} Available
+          {% elif is_state('input_boolean.mock_charger_enabled','off') %} Preparing
+          {% elif states('input_number.mock_charger_session_amps_setting')|float(0) < 6 %} SuspendedEVSE
+          {% else %} Charging {% endif %}
+  - switch:
+      - name: Mock Charger Charge Control
+        unique_id: mock_charger_charge_control
+        state: "{{ is_state('input_boolean.mock_charger_enabled','on') }}"
+        turn_on:
+          - action: input_boolean.turn_on
+            target:
+              entity_id: input_boolean.mock_charger_enabled
+        turn_off:
+          - action: input_boolean.turn_off
+            target:
+              entity_id: input_boolean.mock_charger_enabled
+  - number:
+      - name: Mock Charger Maximum Current
+        unique_id: mock_charger_maximum_current
+        state: "{{ states('input_number.mock_charger_max_amps_setting')|float(16) }}"
+        min: 6
+        max: 40
+        step: 1
+        unit_of_measurement: A
+        set_value:
+          - action: input_number.set_value
+            target:
+              entity_id: input_number.mock_charger_max_amps_setting
+            data:
+              value: "{{ value }}"
+      - name: Mock Charger Session Current Limit
+        unique_id: mock_charger_session_current_limit
+        state: "{{ states('input_number.mock_charger_session_amps_setting')|float(0) }}"
+        min: 0
+        max: 40
+        step: 1
+        unit_of_measurement: A
+        set_value:
+          - action: input_number.set_value
+            target:
+              entity_id: input_number.mock_charger_session_amps_setting
+            data:
+              value: "{{ value }}"

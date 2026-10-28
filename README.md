@@ -1,60 +1,46 @@
-# Notice
+# Mock Solar
 
-The component and platforms in this repository are not meant to be used by a
-user, but as a "blueprint" that custom component developers can build
-upon, to make more awesome stuff.
+Mock Solar is a planned Home Assistant energy simulator for testing automations
+and integrations without physical hardware. It will expose solar production,
+household load, home battery storage, grid import/export, an EV charger and an EV
+battery through standard Home Assistant entities.
 
-HAVE FUN! 😎
+## Current status
 
-## Why?
+This checkout contains a renamed integration blueprint, not a working energy
+simulator. Its configuration flow still requests sample credentials and its
+entities use JSONPlaceholder data. Do not enter real credentials.
 
-This is simple, by having custom_components look (README + structure) the same
-it is easier for developers to help each other and for users to start using them.
+The original YAML package is preserved unchanged at
+[`examples/legacy/mock_energy.yaml`](examples/legacy/mock_energy.yaml). It has
+known power-balance and charger-state inconsistencies described in the
+[prototype review](docs/prototype-review.md). The [original dashboard](examples/legacy/mock_energy_dashboard.yaml) is also
+preserved. Load dashboard YAML through the Lovelace dashboard editor, never
+inside `/config/packages/`. Neither reference file is enabled in the development
+configuration.
 
-If you are a developer and you want to add things to this "blueprint" that you think more
-developers will have use for, please open a PR to add it :)
+See [the assessment and migration plan](docs/migration-plan.md) for the inventory,
+power conventions, EV Smart Charger compatibility findings and implementation steps.
 
-## What?
+## Planned first release
 
-This repository contains multiple files, here is a overview:
+- UI configuration without credentials or cloud access.
+- Adjustable solar production, household load, battery power and SOC.
+- EV connection, charging enable/finished controls and independent current limits.
+- Immediate recalculation of charger power, total household load and grid power.
+- EV SOC and normalized charger status sensors for external integrations.
+- Optional dashboard using native entities.
 
-File | Purpose | Documentation
--- | -- | --
-`.devcontainer.json` | Used for development/testing with Visual Studio Code. | [Documentation](https://code.visualstudio.com/docs/remote/containers)
-`.github/renovate.json` | Dependency update configuration for Renovate (enabled by default). | [Documentation](https://docs.renovatebot.com/configuration-options/)
-`.github/_dependabot.yml` | Dependency update configuration for Dependabot (disabled, see "Dependency updates" below). | [Documentation](https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file)
-`.github/ISSUE_TEMPLATE/*.yml` | Templates for the issue tracker | [Documentation](https://help.github.com/en/github/building-a-strong-community/configuring-issue-templates-for-your-repository)
-`custom_components/integration_blueprint/*` | Integration files, this is where everything happens. | [Documentation](https://developers.home-assistant.io/docs/creating_component_index)
-`CONTRIBUTING.md` | Guidelines on how to contribute. | [Documentation](https://help.github.com/en/github/building-a-strong-community/setting-guidelines-for-repository-contributors)
-`LICENSE` | The license file for the project. | [Documentation](https://help.github.com/en/github/creating-cloning-and-archiving-repositories/licensing-a-repository)
-`README.md` | The file you are reading now, should contain info about the integration, installation and configuration instructions. | [Documentation](https://help.github.com/en/github/writing-on-github/basic-writing-and-formatting-syntax)
-`requirements_dev.txt` | Python packages used for development/testing this integration (also installs lint tooling via `requirements_lint.txt`). | [Documentation](https://pip.pypa.io/en/stable/user_guide/#requirements-files)
-`requirements_lint.txt` | Python packages used to lint this integration (installed by the Lint CI job). | [Documentation](https://pip.pypa.io/en/stable/user_guide/#requirements-files)
-`requirements_common.txt` | Python packages common to CI and local dev, installed first so any pip upgrade completes before other dependencies (e.g. a modern pip). | [Documentation](https://pip.pypa.io/en/stable/user_guide/#requirements-files)
+Time-based SOC, accelerated simulation and scenario presets follow the manual model.
 
-## Dependency updates
+## Development
 
-This template ships with configuration for **two** dependency update tools. Pick
-**one** and remove or disable the other:
+The integration domain remains `mock_solar`; source is in
+`custom_components/mock_solar/`.
 
-- **Renovate** (`.github/renovate.json`) is enabled by default.
-- **Dependabot** (`.github/_dependabot.yml`) is included but disabled — the `_`
-  prefix means GitHub ignores it. To use Dependabot instead, rename the file
-  back to `.github/dependabot.yml` and delete `.github/renovate.json`.
+- `scripts/setup`: install development dependencies.
+- `scripts/develop`: start Home Assistant with the development configuration.
+- `scripts/lint`: run lint tools.
 
-## How?
-
-1. Create a new repository in GitHub, using this repository as a template by clicking the "Use this template" button in the GitHub UI.
-1. Open your new repository in Visual Studio Code devcontainer (Preferably with the "`Dev Containers: Clone Repository in Named Container Volume...`" option).
-1. Rename all instances of the `integration_blueprint` to `custom_components/<your_integration_domain>` (e.g. `custom_components/awesome_integration`).
-1. Rename all instances of the `Integration Blueprint` to `<Your Integration Name>` (e.g. `Awesome Integration`).
-1. Run the `scripts/develop` to start HA and test out your new integration.
-
-## Next steps
-
-These are some next steps you may want to look into:
-- Add tests to your integration, [`pytest-homeassistant-custom-component`](https://github.com/MatthewFlamm/pytest-homeassistant-custom-component) can help you get started.
-- Add brand images (logo/icon).
-- Create your first release.
-- Share your integration on the [Home Assistant Forum](https://community.home-assistant.io/).
-- Submit your integration to [HACS](https://hacs.xyz/docs/publish/start).
+These scripts currently operate on the blueprint. HACS metadata is present;
+a simulator release has not yet been validated.
