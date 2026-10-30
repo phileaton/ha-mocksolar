@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
-from math import isfinite
+from math import cos, isfinite, pi, sin
 
 MIN_CHARGING_CURRENT = 6
 MAX_SOC = 100
 BATTERY_MAX_KW = 12
+SUNRISE_HOUR = 6
+SUNSET_HOUR = 18
 
 # Minimum, maximum and step; shared by validation and native number entities.
 NUMBER_LIMITS = {
@@ -22,6 +24,7 @@ NUMBER_LIMITS = {
     "ev_charging_efficiency": (1, 100, 1),
     "ev_target_soc": (0, 100, 1),
     "simulation_speed": (1, 3600, 1),
+    "forecast_daily_kwh": (0, 200, 0.5),
 }
 SWITCH_KEYS = (
     "dynamic_enabled",
@@ -46,6 +49,7 @@ class SimulationState:
     ev_charging_efficiency: float = 95
     ev_target_soc: float = 80
     simulation_speed: float = 1
+    forecast_daily_kwh: float = 30
     dynamic_enabled: bool = False
     charger_connected: bool = True
     charger_enabled: bool = False
@@ -178,3 +182,29 @@ class SimulationState:
         if self.charger_state in states:
             return states[self.charger_state]
         return "SuspendedEVSE" if self.charger_enabled else "Preparing"
+
+
+def _daylight_fraction(hour: float) -> float:
+    """Return the share (0-1) of daily energy produced by a local hour."""
+    progress = (hour - SUNRISE_HOUR) / (SUNSET_HOUR - SUNRISE_HOUR)
+    progress = min(1, max(0, progress))
+    return (1 - cos(pi * progress)) / 2
+
+
+def forecast_energy_so_far_kwh(daily_kwh: float, hour: float) -> float:
+    """Return forecast energy produced today up to a local hour (half-sine day)."""
+    return daily_kwh * _daylight_fraction(hour)
+
+
+def forecast_energy_remaining_kwh(daily_kwh: float, hour: float) -> float:
+    """Return forecast energy still to be produced today."""
+    return daily_kwh - forecast_energy_so_far_kwh(daily_kwh, hour)
+
+
+def forecast_power_kw(daily_kwh: float, hour: float) -> float:
+    """Return forecast power at a local hour, peaking at solar noon."""
+    if not SUNRISE_HOUR < hour < SUNSET_HOUR:
+        return 0
+    duration = SUNSET_HOUR - SUNRISE_HOUR
+    progress = (hour - SUNRISE_HOUR) / duration
+    return daily_kwh * pi / (2 * duration) * sin(pi * progress)

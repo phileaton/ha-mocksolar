@@ -41,6 +41,17 @@
         },
         {
           "type": "entities",
+          "title": "Solar Forecast",
+          "entities": [
+            "number.mock_forecast_daily_kwh",
+            "sensor.mock_forecast_energy_remaining_today",
+            "sensor.mock_forecast_energy_produced_today",
+            "sensor.mock_forecast_energy_today",
+            "sensor.mock_forecast_power_now"
+          ]
+        },
+        {
+          "type": "entities",
           "title": "Simulated Telemetry",
           "entities": [
             "sensor.mock_solar_power",

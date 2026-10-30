@@ -110,6 +110,7 @@ per real second. These additional controls configure the model:
 | `number.mock_ev_charging_efficiency` | 95% | 1–100% of charger energy stored in EV |
 | `number.mock_ev_target_soc` | 80% | 0–100% charging target |
 | `number.mock_simulation_speed` | 1 | 1–3600 times real elapsed time |
+| `number.mock_forecast_daily_kwh` | 30 kWh | 0–200 kWh forecast for today; drives the `sensor.mock_forecast_*` sensors (total, produced so far, remaining today, power now) using a 06:00–18:00 half-sine curve in local time |
 | `button.mock_reset_simulator` | — | Restore every default and return to manual mode |
 
 For a quick session, set the session limit to 16 A, enable charging, set speed

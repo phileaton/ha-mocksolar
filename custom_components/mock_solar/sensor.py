@@ -1,5 +1,6 @@
 """Read-only derived energy telemetry."""
 
+from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
 
 from homeassistant.components.sensor import (
@@ -7,11 +8,21 @@ from homeassistant.components.sensor import (
     SensorEntity,
     SensorStateClass,
 )
-from homeassistant.const import PERCENTAGE, UnitOfPower
+from homeassistant.const import PERCENTAGE, UnitOfEnergy, UnitOfPower
+from homeassistant.core import callback
+from homeassistant.helpers.event import async_track_time_interval
+from homeassistant.util import dt as dt_util
 
 from .entity import MockSolarEntity
+from .simulation import (
+    forecast_energy_remaining_kwh,
+    forecast_energy_so_far_kwh,
+    forecast_power_kw,
+)
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from homeassistant.core import HomeAssistant
     from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
@@ -96,6 +107,40 @@ COMPATIBILITY_SENSORS = (
     ),
 )
 
+FORECAST_REFRESH = timedelta(minutes=1)
+
+# Entity key, display name, function(daily_kwh, local hour), device class, unit.
+FORECAST_SENSORS = (
+    (
+        "forecast_energy_today",
+        "Solar forecast energy today",
+        lambda daily, _hour: daily,
+        SensorDeviceClass.ENERGY,
+        UnitOfEnergy.KILO_WATT_HOUR,
+    ),
+    (
+        "forecast_energy_produced_today",
+        "Solar forecast energy produced so far today",
+        forecast_energy_so_far_kwh,
+        SensorDeviceClass.ENERGY,
+        UnitOfEnergy.KILO_WATT_HOUR,
+    ),
+    (
+        "forecast_energy_remaining_today",
+        "Solar forecast energy remaining today",
+        forecast_energy_remaining_kwh,
+        SensorDeviceClass.ENERGY,
+        UnitOfEnergy.KILO_WATT_HOUR,
+    ),
+    (
+        "forecast_power_now",
+        "Solar forecast power now",
+        forecast_power_kw,
+        SensorDeviceClass.POWER,
+        UnitOfPower.KILO_WATT,
+    ),
+)
+
 
 async def async_setup_entry(
     hass: HomeAssistant,  # noqa: ARG001 HA platform interface
@@ -117,7 +162,50 @@ async def async_setup_entry(
             )
             for key, name, attribute, scale in COMPATIBILITY_SENSORS
         ]
+        + [
+            MockSolarForecastSensor(entry.runtime_data, *item)
+            for item in FORECAST_SENSORS
+        ]
     )
+
+
+class MockSolarForecastSensor(MockSolarEntity, SensorEntity):
+    """Forecast.Solar-style estimate derived from the daily forecast slider."""
+
+    def __init__(  # noqa: PLR0913 Sensor metadata fields
+        self,
+        coordinator: MockSolarCoordinator,
+        key: str,
+        name: str,
+        calculate: Callable[[float, float], float],
+        device_class: SensorDeviceClass,
+        unit: str,
+    ) -> None:
+        """Describe the forecast calculation and its metadata."""
+        super().__init__(coordinator, key, name)
+        self.entity_id = f"sensor.mock_{key}"
+        self._calculate = calculate
+        self._attr_device_class = device_class
+        self._attr_native_unit_of_measurement = unit
+
+    async def async_added_to_hass(self) -> None:
+        """Refresh periodically because the forecast follows the wall clock."""
+        await super().async_added_to_hass()
+
+        @callback
+        def _refresh(_now: datetime) -> None:
+            self.async_write_ha_state()
+
+        self.async_on_remove(
+            async_track_time_interval(self.hass, _refresh, FORECAST_REFRESH)
+        )
+
+    @property
+    def native_value(self) -> float:
+        """Return the forecast for the current local time."""
+        now = dt_util.now()
+        hour = now.hour + now.minute / 60 + now.second / 3600
+        return round(self._calculate(self.coordinator.data.forecast_daily_kwh, hour), 3)
 
 
 class MockSolarSensor(MockSolarEntity, SensorEntity):

@@ -98,7 +98,7 @@ class SimulationTests(unittest.TestCase):
         for key, value in (
             ("solar_kw", -1),
             ("house_kw", 21),
-                        ("battery_soc_setting", 101),
+            ("battery_soc_setting", 101),
             ("ev_soc_setting", -1),
             ("charger_max_amps_setting", 0),
             ("charger_session_amps_setting", 41),
@@ -121,3 +121,20 @@ class SimulationTests(unittest.TestCase):
         self.assertEqual(updated.battery_power, -8)
         with self.assertRaises(FrozenInstanceError):
             state.solar_kw = 0
+
+
+class ForecastTests(unittest.TestCase):
+    """Check the half-sine solar forecast."""
+
+    def test_forecast_energy_and_power(self) -> None:
+        """Remaining energy falls from the daily total to zero across the day."""
+        from custom_components.mock_solar.simulation import (  # noqa: PLC0415
+            forecast_energy_remaining_kwh,
+            forecast_power_kw,
+        )
+
+        self.assertAlmostEqual(forecast_energy_remaining_kwh(30, 3), 30)
+        self.assertAlmostEqual(forecast_energy_remaining_kwh(30, 12), 15)
+        self.assertAlmostEqual(forecast_energy_remaining_kwh(30, 20), 0)
+        self.assertEqual(forecast_power_kw(30, 22), 0)
+        self.assertGreater(forecast_power_kw(30, 12), forecast_power_kw(30, 8))

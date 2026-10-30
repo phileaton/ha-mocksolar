@@ -58,6 +58,12 @@ NUMBERS = (
         PERCENTAGE,
     ),
     ("ev_target_soc", "EV target SOC", "ev_target_soc", PERCENTAGE),
+    (
+        "forecast_daily_kwh",
+        "Solar forecast today",
+        "forecast_daily_kwh",
+        UnitOfEnergy.KILO_WATT_HOUR,
+    ),
     ("simulation_speed", "Simulation speed multiplier", "simulation_speed", None),
 )
 
