@@ -138,3 +138,20 @@ class ForecastTests(unittest.TestCase):
         self.assertAlmostEqual(forecast_energy_remaining_kwh(30, 20), 0)
         self.assertEqual(forecast_power_kw(30, 22), 0)
         self.assertGreater(forecast_power_kw(30, 12), forecast_power_kw(30, 8))
+
+
+class ForecastOverrideTests(unittest.TestCase):
+    """Check the remaining-percentage forecast override."""
+
+    def test_override_uses_percentage(self) -> None:
+        """Remaining energy follows the slider instead of the clock."""
+        state = SimulationState(
+            forecast_daily_kwh=40,
+            forecast_remaining_percent=25,
+            forecast_override_enabled=True,
+        )
+        self.assertEqual(state.forecast_remaining_kwh(3), 10)
+        self.assertEqual(
+            replace(state, forecast_override_enabled=False).forecast_remaining_kwh(3),
+            40,
+        )

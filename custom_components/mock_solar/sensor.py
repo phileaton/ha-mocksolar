@@ -14,11 +14,7 @@ from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.util import dt as dt_util
 
 from .entity import MockSolarEntity
-from .simulation import (
-    forecast_energy_remaining_kwh,
-    forecast_energy_so_far_kwh,
-    forecast_power_kw,
-)
+from .simulation import SimulationState
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -109,33 +105,35 @@ COMPATIBILITY_SENSORS = (
 
 FORECAST_REFRESH = timedelta(minutes=1)
 
-# Entity key, display name, function(daily_kwh, local hour), device class, unit.
+# Entity key, display name, function(state, local hour), device class, unit.
 FORECAST_SENSORS = (
     (
         "forecast_energy_today",
         "Solar forecast energy today",
-        lambda daily, _hour: daily,
+        lambda state, _hour: state.forecast_daily_kwh,
         SensorDeviceClass.ENERGY,
         UnitOfEnergy.KILO_WATT_HOUR,
     ),
     (
         "forecast_energy_produced_today",
         "Solar forecast energy produced so far today",
-        forecast_energy_so_far_kwh,
+        lambda state, hour: (
+            state.forecast_daily_kwh - state.forecast_remaining_kwh(hour)
+        ),
         SensorDeviceClass.ENERGY,
         UnitOfEnergy.KILO_WATT_HOUR,
     ),
     (
         "forecast_energy_remaining_today",
         "Solar forecast energy remaining today",
-        forecast_energy_remaining_kwh,
+        SimulationState.forecast_remaining_kwh,
         SensorDeviceClass.ENERGY,
         UnitOfEnergy.KILO_WATT_HOUR,
     ),
     (
         "forecast_power_now",
         "Solar forecast power now",
-        forecast_power_kw,
+        SimulationState.forecast_power_kw,
         SensorDeviceClass.POWER,
         UnitOfPower.KILO_WATT,
     ),
@@ -177,7 +175,7 @@ class MockSolarForecastSensor(MockSolarEntity, SensorEntity):
         coordinator: MockSolarCoordinator,
         key: str,
         name: str,
-        calculate: Callable[[float, float], float],
+        calculate: Callable[[SimulationState, float], float],
         device_class: SensorDeviceClass,
         unit: str,
     ) -> None:
@@ -205,7 +203,7 @@ class MockSolarForecastSensor(MockSolarEntity, SensorEntity):
         """Return the forecast for the current local time."""
         now = dt_util.now()
         hour = now.hour + now.minute / 60 + now.second / 3600
-        return round(self._calculate(self.coordinator.data.forecast_daily_kwh, hour), 3)
+        return round(self._calculate(self.coordinator.data, hour), 3)
 
 
 class MockSolarSensor(MockSolarEntity, SensorEntity):

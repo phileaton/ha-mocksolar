@@ -18,6 +18,11 @@ SWITCHES = (
     ("charger_charge_control", "Charger charge control", "charger_enabled"),
     ("charger_connected", "EV connected", "charger_connected"),
     ("charger_force_finishing", "Force charging finished", "charger_force_finishing"),
+    (
+        "forecast_override_enabled",
+        "Override solar forecast remaining",
+        "forecast_override_enabled",
+    ),
 )
 
 

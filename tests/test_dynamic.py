@@ -59,9 +59,7 @@ class DynamicModelTests(unittest.TestCase):
         full = replace(state, solar_kw=4).advance(3600 * 100)
         self.assertEqual(full.battery_soc_setting, 100)
         self.assertEqual(full.battery_power, 0)
-        self.assertLess(
-            replace(full, solar_kw=0).advance(60).battery_soc_setting, 100
-        )
+        self.assertLess(replace(full, solar_kw=0).advance(60).battery_soc_setting, 100)
         self.assertGreater(
             replace(empty, solar_kw=4).advance(60).battery_soc_setting, 0
         )

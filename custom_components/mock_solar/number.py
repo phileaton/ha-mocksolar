@@ -64,6 +64,12 @@ NUMBERS = (
         "forecast_daily_kwh",
         UnitOfEnergy.KILO_WATT_HOUR,
     ),
+    (
+        "forecast_remaining_percent",
+        "Solar forecast remaining override",
+        "forecast_remaining_percent",
+        PERCENTAGE,
+    ),
     ("simulation_speed", "Simulation speed multiplier", "simulation_speed", None),
 )
 

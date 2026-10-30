@@ -44,6 +44,8 @@
           "title": "Solar Forecast",
           "entities": [
             "number.mock_forecast_daily_kwh",
+            "switch.mock_forecast_override_enabled",
+            "number.mock_forecast_remaining_percent",
             "sensor.mock_forecast_energy_remaining_today",
             "sensor.mock_forecast_energy_produced_today",
             "sensor.mock_forecast_energy_today",

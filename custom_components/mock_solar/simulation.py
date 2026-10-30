@@ -25,12 +25,14 @@ NUMBER_LIMITS = {
     "ev_target_soc": (0, 100, 1),
     "simulation_speed": (1, 3600, 1),
     "forecast_daily_kwh": (0, 200, 0.5),
+    "forecast_remaining_percent": (0, 100, 1),
 }
 SWITCH_KEYS = (
     "dynamic_enabled",
     "charger_connected",
     "charger_enabled",
     "charger_force_finishing",
+    "forecast_override_enabled",
 )
 
 
@@ -50,10 +52,12 @@ class SimulationState:
     ev_target_soc: float = 80
     simulation_speed: float = 1
     forecast_daily_kwh: float = 30
+    forecast_remaining_percent: float = 100
     dynamic_enabled: bool = False
     charger_connected: bool = True
     charger_enabled: bool = False
     charger_force_finishing: bool = False
+    forecast_override_enabled: bool = False
 
     def __post_init__(self) -> None:
         """Reject invalid values before they enter shared state."""
@@ -112,6 +116,18 @@ class SimulationState:
                 * 100,
             )
         return replace(self, battery_soc_setting=battery_soc, ev_soc_setting=ev_soc)
+
+    def forecast_remaining_kwh(self, hour: float) -> float:
+        """Return remaining forecast energy, from the slider when overridden."""
+        if self.forecast_override_enabled:
+            return self.forecast_daily_kwh * self.forecast_remaining_percent / 100
+        return forecast_energy_remaining_kwh(self.forecast_daily_kwh, hour)
+
+    def forecast_power_kw(self, hour: float) -> float:
+        """Return forecast power, zero once an override leaves nothing to produce."""
+        if self.forecast_override_enabled and self.forecast_remaining_percent == 0:
+            return 0
+        return forecast_power_kw(self.forecast_daily_kwh, hour)
 
     @property
     def battery_power(self) -> float:
